@@ -1,0 +1,6 @@
+# local working files
+fries.pdf
+fries_*.txt
+*.log
+.DS_Store
+Thumbs.db

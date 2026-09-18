@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>籃具工件擺放計算與3D預覽 - FRIES Raster支援</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI","Microsoft JhengHei",Arial,sans-serif;background:#0f1117;color:#e6e8ec;height:100vh;display:flex;flex-direction:column}
+header{padding:14px 20px;background:#1a1d27;border-bottom:1px solid #2a2f45;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:18px;font-weight:700;letter-spacing:0.5px}
+header .sub{font-size:12px;color:#8b92a8}
+main{flex:1;display:flex;min-height:0}
+@media(max-width:1000px){main{flex-direction:column}}
+#panel{width:400px;min-width:340px;background:#161a26;border-right:1px solid #2a2f45;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+@media(max-width:1000px){#panel{width:100%;border-right:none;border-bottom:1px solid #2a2f45;max-height:62vh}}
+.card{background:#1e2335;border:1px solid #2a2f45;border-radius:10px;padding:14px}
+.card h3{font-size:13px;color:#8b92a8;margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.row label{width:68px;font-size:12px;color:#aab0c6;flex-shrink:0}
+.row input,.row select{flex:1;background:#0f1420;border:1px solid #2e344e;color:#e6e8ec;border-radius:6px;padding:7px 8px;font-size:13px;outline:none}
+.row input:focus,.row select:focus{border-color:#4c6ef5}
+.btn{padding:7px 12px;border-radius:6px;border:1px solid #2e344e;background:#252b40;color:#e6e8ec;cursor:pointer;font-size:12px;transition:0.15s}
+.btn:hover{background:#2e3658}
+.btn.primary{background:#4c6ef5;border-color:#4c6ef5;color:#fff}
+.btn.primary:hover{background:#3b5bdb}
+.btn.danger{background:#2a1a1f;border-color:#5c2b2b;color:#ffb0b0}
+.btn.danger:hover{background:#4a2424}
+.btn.small{padding:4px 8px;font-size:11px}
+.flex{flex:1}
+.badge{display:inline-block;padding:2px 7px;border-radius:999px;background:#0f1420;border:1px solid #2e344e;font-size:11px;color:#8b92a8}
+.badge.warn{background:#2a1f0f;border-color:#5c4a2b;color:#ffd68a}
+.badge.ok{background:#0f1f14;border-color:#2b5c3a;color:#8affb0}
+#resultBox{background:linear-gradient(135deg,#1e2335,#1a2744);border:1px solid #2e3a5c}
+#resultNum{font-size:32px;font-weight:800;color:#4dabf7;line-height:1}
+#resultNum small{font-size:14px;color:#8b92a8;font-weight:400}
+.detail{font-size:12px;line-height:1.6;color:#aab0c6;margin-top:8px}
+.kv{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px dashed #2a2f45;color:#aab0c6}
+.kv:last-child{border-bottom:none}
+.kv span:last-child{color:#e6e8ec;font-weight:600}
+  #viewer{flex:1;position:relative;background:radial-gradient(1200px 600px at 50% 20%,#1b2138 0%,#0f1117 60%);overflow:hidden;min-height:320px}
+#canvas{width:100%;height:100%;display:block;min-height:320px}
+#errorBox{position:absolute;left:12px;top:60px;right:12px;background:#3a1a1a;border:1px solid #5c2b2b;color:#ffb0b0;padding:10px;border-radius:8px;font-size:12px;display:none;z-index:10;white-space:pre-wrap}
+#overlay{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#overlay .pill{background:rgba(15,20,32,0.85);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(6px);padding:6px 10px;border-radius:999px;font-size:11px;color:#aab0c6;display:flex;gap:6px;align-items:center}
+.legend{position:absolute;right:12px;bottom:12px;background:rgba(15,20,32,0.85);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(6px);padding:10px 12px;border-radius:10px;font-size:11px;color:#aab0c6;line-height:1.6}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:6px;border:1px solid rgba(255,255,255,0.2)}
+.checkRow{display:flex;align-items:center;gap:8px;font-size:12px;color:#aab0c6;margin-top:8px}
+.checkRow input{accent-color:#4c6ef5}
+.hint{font-size:11px;color:#6c728a;line-height:1.5;margin-top:6px}
+.divider{height:1px;background:#2a2f45;margin:8px 0}
+.alert{background:#1a2744;border:1px solid #2e3a5c;border-radius:8px;padding:10px;font-size:11px;line-height:1.6;color:#aab0c6}
+.alert b{color:#8ec0ff}
+.rasterBox{background:#1a1f2e;border:1px dashed #3a4a6a;border-radius:8px;padding:10px;margin-top:8px}
+.rasterBox.hidden{display:none}
+.compare{background:#0f1420;border:1px solid #2e344e;border-radius:8px;padding:8px;margin-top:8px;font-size:11px}
+.compare b{color:#ffd68a}
+</style>
+<script src="./libs/three.min.js"></script>
+<script src="./libs/OrbitControls_umd.js"></script>
+</head>
+<body>
+<header>
+  <h1>籃具工件擺放計算</h1>
+  <span class="sub">不堆疊 · 最小間隔 · Raster隔板限制 · 3D 拖曳旋轉</span>
+  <span class="badge" id="versionBadge">v2.5 BEST</span>
+  <div style="margin-left:auto;display:flex;gap:8px">
+    <button class="btn small" onclick="resetCamera()">重設視角</button>
+    <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
+    <button class="btn small" onclick="toggleDividers()" id="dividerBtn">隔板顯示</button>
+  </div>
+</header>
+<main>
+  <div id="panel">
+    <div class="card">
+      <h3>🧺 籃具尺寸 <span class="badge" style="margin-left:auto" id="basketCountBadge"></span></h3>
+      <div class="row">
+        <label>選擇</label>
+        <select id="basketSelect"></select>
+      </div>
+      <div class="row">
+        <label>籃具類型</label>
+        <select id="basketType">
+          <option value="free">自由擺放（無網格限制）</option>
+          <option value="variogrid9">FRIES variogrid / techtray — 9 mm Raster</option>
+          <option value="techrack15">FRIES tech-rack — 15 mm Raster</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>長 L</label><input id="basketL" type="number" min="1" step="1" value="400">
+        <span style="font-size:12px;color:#6c728a">mm</span>
+      </div>
+      <div class="row">
+        <label>寬 W</label><input id="basketW" type="number" min="1" step="1" value="300">
+        <span style="font-size:12px;color:#6c728a">mm</span>
+      </div>
+      <div class="row">
+        <label>高 H</label><input id="basketH" type="number" min="1" step="1" value="96">
+        <span style="font-size:12px;color:#6c728a">mm</span>
+      </div>
+      <div id="rasterBox" class="rasterBox hidden">
+        <div style="font-size:11px;color:#8ec0ff;margin-bottom:6px"><b>Raster 隔板限制</b> — 參考 FRIES 2026 型錄 p.6-10 / p.74</div>
+        <div class="row"><label>Raster</label><input id="raster" type="number" min="1" step="1" value="9"><span style="font-size:11px;color:#6c728a">mm</span></div>
+        <div class="row"><label>隔板厚</label><input id="dividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:11px;color:#6c728a">mm (Teilerstärke)</span></div>
+        <div class="hint">9 mm = variogrid/techtray，15 mm = tech-rack。隔板只能架在 Raster 倍數位置，每個工件+間隔需向上取整到 Raster 倍數，造成額外空間損耗。Deckel für Grundkorb 600×400×13 可與 variogrid/tech-rack 組合，但同樣受此限制。</div>
+      </div>
+      <div class="row">
+        <label>名稱</label><input id="basketName" type="text" placeholder="例如 400x300x96 / FRIES Deckel 600x400x13">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn primary flex" onclick="saveBasket()">新增 / 更新</button>
+        <button class="btn danger" onclick="deleteBasket()">刪除</button>
+        <button class="btn" onclick="applyBasketSelect()">套用</button>
+      </div>
+      <div class="hint">籃具清單可無限擴充，自動儲存於瀏覽器 (localStorage)。已內建 FRIES 規格，參考 <a href="https://www.fries-kt.com/wp-content/uploads/2026_DE_FRIES-Werkstuecktraeger_Prospekt_web.pdf" target="_blank" style="color:#8ec0ff">2026 FRIES 型錄 PDF</a>。</div>
+      <div class="alert" style="margin-top:8px">
+        <b>提示：Deckel für Grundkorb 600×400×13</b><br>
+        型錄 p.22-23 / p.62：此為上蓋/底板（高 13mm），需搭配 variogrid 或 tech-rack 隔板系統使用。工件不能自由擺放，必須對齊 <b>9 mm 或 15 mm 網格</b>。若選此籃具，請將類型設為對應 Raster，程式會自動計算網格取整後的實際容量（通常少於自由擺放理論值）。
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📦 工件尺寸（不可堆疊）</h3>
+      <div class="row"><label>長 L</label><input id="partL" type="number" min="1" step="1" value="150"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>寬 W</label><input id="partW" type="number" min="1" step="1" value="100"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="1" value="50"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>間隔</label><input id="gap" type="number" min="0" step="1" value="5"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="checkRow"><input type="checkbox" id="allowRotate" checked><label for="allowRotate" style="cursor:pointer">允許工件水平旋轉 90° 自動擇優</label></div>
+      <div class="checkRow"><input type="checkbox" id="wallGap"><label for="wallGap" style="cursor:pointer">籃具邊框也保留間隔（四周留白）</label></div>
+      <div class="hint">間隔為工件之間最小距離。高度僅檢查是否放得下，不堆疊。</div>
+    </div>
+
+    <div class="card" id="resultBox">
+      <h3>📊 計算結果 <span class="badge" id="orientationBadge">-</span> <span class="badge warn" id="rasterBadge" style="display:none">Raster</span></h3>
+      <div id="resultNum">- <small>個</small></div>
+      <div class="detail" id="resultDetail">調整參數後自動計算</div>
+      <div class="divider"></div>
+      <div id="resultKV"></div>
+      <div id="compareBox" class="compare" style="display:none"></div>
+    </div>
+  </div>
+
+  <div id="viewer">
+    <div id="bestBadge" style="position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#4c6ef5;color:#fff;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;z-index:5;box-shadow:0 4px 12px rgba(0,0,0,0.3)">�̨���k���J��...</div>
+    <canvas id="canvas"></canvas>
+    <div id="fileWarn" style="position:absolute;left:12px;top:60px;right:12px;background:#0f1f14;border:1px solid #2b5c3a;color:#8affb0;padding:8px 10px;border-radius:8px;font-size:11px;display:none;z-index:9">✓ 已支援 <b>file:// 直接開啟</b>（本地已內建 Three.js，無需 http 伺服器）</div>
+    <div id="errorBox"></div>
+    <div id="overlay">
+      <div class="pill">🖱️ 左鍵拖曳旋轉 · 滾輪縮放 · 右鍵平移</div>
+      <div class="pill" id="infoPill">-</div>
+    </div>
+    <div class="legend">
+      <div><i style="background:#4dabf7"></i>工件</div>
+      <div><i style="background:rgba(80,100,160,0.25);border:1px solid #5a6b9a"></i>籃具</div>
+      <div><i style="background:#8a7a3a;border:1px solid #c2a84b"></i>Raster 隔板（3mm，僅Raster籃具）</div>
+      <div><i style="background:rgba(120,130,160,0.15);border:1px dashed #5a6b9a"></i>9/15mm 網格線</div>
+      <div style="margin-top:6px;color:#6c728a">單位 mm · 1:1 比例</div>
+    </div>
+  </div>
+</main>
+
+<script>
+// file:// compatible - using global THREE
+const OrbitControls = THREE.OrbitControls;
+
+const els = {
+  basketSelect: document.getElementById('basketSelect'),
+  basketType: document.getElementById('basketType'),
+  basketL: document.getElementById('basketL'),
+  basketW: document.getElementById('basketW'),
+  basketH: document.getElementById('basketH'),
+  basketName: document.getElementById('basketName'),
+  basketCountBadge: document.getElementById('basketCountBadge'),
+  rasterBox: document.getElementById('rasterBox'),
+  raster: document.getElementById('raster'),
+  dividerThick: document.getElementById('dividerThick'),
+  partL: document.getElementById('partL'),
+  partW: document.getElementById('partW'),
+  partH: document.getElementById('partH'),
+  gap: document.getElementById('gap'),
+  allowRotate: document.getElementById('allowRotate'),
+  wallGap: document.getElementById('wallGap'),
+  resultNum: document.getElementById('resultNum'),
+  resultDetail: document.getElementById('resultDetail'),
+  resultKV: document.getElementById('resultKV'),
+  orientationBadge: document.getElementById('orientationBadge'),
+  rasterBadge: document.getElementById('rasterBadge'),
+  compareBox: document.getElementById('compareBox'),
+  infoPill: document.getElementById('infoPill'),
+  canvas: document.getElementById('canvas'),
+  wireBtn: document.getElementById('wireBtn'),
+  dividerBtn: document.getElementById('dividerBtn'),
+};
+
+const STORAGE_KEY = 'basketPresets_v2';
+const DEFAULT_PRESETS = [
+  {id:'default-400x300x96', name:'標準籃 400×300×96（自由）', L:400,W:300,H:96, type:'free', raster:0, divider:0},
+  {id:'fries-deckel-600x400x13', name:'FRIES Deckel für Grundkorb 600×400×13', L:600,W:400,H:13, type:'variogrid9', raster:9, divider:3},
+  {id:'fries-variogrid-600x400x13', name:'FRIES variogrid Grundplatte 600×400×13 (9mm)', L:600,W:400,H:13, type:'variogrid9', raster:9, divider:3},
+  {id:'fries-variogrid-low-600x400x36', name:'FRIES variogrid + Toprahmen niedrig 600×400×36', L:600,W:400,H:36, type:'variogrid9', raster:9, divider:3},
+  {id:'fries-variogrid-high-600x400x63', name:'FRIES variogrid + Toprahmen hoch 600×400×63', L:600,W:400,H:63, type:'variogrid9', raster:9, divider:3},
+  {id:'fries-techrack-600x400x120', name:'FRIES tech-rack 600×400×120 (15mm)', L:600,W:400,H:120, type:'techrack15', raster:15, divider:3},
+  {id:'fries-techtray-425x276', name:'FRIES techtray 425×276 (9mm Schäfer)', L:425,W:276,H:30, type:'variogrid9', raster:9, divider:3},
+  {id:'preset-300x200x100', name:'小籃 300×200×100（自由）', L:300,W:200,H:100, type:'free', raster:0, divider:0},
+];
+
+function loadPresets(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){ const arr=JSON.parse(raw); if(Array.isArray(arr) && arr.length) return arr; }
+    const old = localStorage.getItem('basketPresets_v1');
+    if(old){
+      const arr=JSON.parse(old);
+      return arr.map(p=>({type:'free', raster:0, divider:0, ...p}));
+    }
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_PRESETS));
+}
+let presets = loadPresets();
+function savePresets(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(presets)); }
+
+function typeToRaster(type){
+  if(type==='variogrid9') return 9;
+  if(type==='techrack15') return 15;
+  return 0;
+}
+function syncRasterBox(){
+  const t = els.basketType.value;
+  if(t==='free'){
+    els.rasterBox.classList.add('hidden');
+  } else {
+    els.rasterBox.classList.remove('hidden');
+    const r = typeToRaster(t);
+    if(r) els.raster.value = r;
+    if(!els.dividerThick.value) els.dividerThick.value=3;
+  }
+}
+els.basketType.addEventListener('change', syncRasterBox);
+
+function refreshBasketSelect(){
+  els.basketSelect.innerHTML='';
+  presets.forEach((p)=>{
+    const o=document.createElement('option');
+    o.value=p.id;
+    const tag = p.type==='free' ? '自由' : (p.raster||typeToRaster(p.type))+'mm Raster';
+    o.textContent=p.name + ' ('+p.L+'×'+p.W+'×'+p.H+' · '+tag+')';
+    els.basketSelect.appendChild(o);
+  });
+  els.basketCountBadge.textContent = presets.length + ' 種';
+}
+function findPreset(id){ return presets.find(p=>p.id===id); }
+function applyBasketSelect(){
+  const p=findPreset(els.basketSelect.value);
+  if(!p) return;
+  els.basketL.value=p.L; els.basketW.value=p.W; els.basketH.value=p.H; els.basketName.value=p.name;
+  els.basketType.value=p.type||'free';
+  if(p.raster) els.raster.value=p.raster; else els.raster.value=typeToRaster(p.type);
+  els.dividerThick.value = p.divider ?? (p.type==='free'?0:3);
+  syncRasterBox();
+  computeAndRender();
+}
+function saveBasket(){
+  const L=parseInt(els.basketL.value)||0, W=parseInt(els.basketW.value)||0, H=parseInt(els.basketH.value)||0;
+  if(L<=0||W<=0||H<=0){ alert('長寬高需大於 0'); return; }
+  let name=(els.basketName.value||'').trim();
+  if(!name) name = L+'×'+W+'×'+H;
+  const type=els.basketType.value;
+  const raster = type==='free' ? 0 : (parseInt(els.raster.value)||typeToRaster(type));
+  const divider = type==='free' ? 0 : (parseFloat(els.dividerThick.value)||3);
+  const id = els.basketSelect.value;
+  const existing = findPreset(id);
+  let target = null;
+  if(existing && (existing.name===name || confirm('要更新目前選擇的 "'+existing.name+'" 嗎？\n按取消則新增一筆'))){
+    target=existing;
+    Object.assign(target,{name,L,W,H,type,raster,divider});
+  } else {
+    const newId='custom-'+Date.now();
+    target={id:newId,name,L,W,H,type,raster,divider};
+    presets.push(target);
+  }
+  savePresets(); refreshBasketSelect();
+  els.basketSelect.value=target.id;
+  computeAndRender();
+}
+function deleteBasket(){
+  const id=els.basketSelect.value;
+  if(presets.length<=1){ alert('至少保留一種籃具'); return; }
+  const p=findPreset(id);
+  if(!p) return;
+  if(!confirm('確定刪除 "'+p.name+'" ?')) return;
+  presets = presets.filter(x=>x.id!==id);
+  savePresets(); refreshBasketSelect();
+  els.basketSelect.value=presets[0].id;
+  applyBasketSelect();
+}
+window.saveBasket=saveBasket; window.deleteBasket=deleteBasket; window.applyBasketSelect=applyBasketSelect;
+
+refreshBasketSelect();
+// 預設改為高度足夠的籃具，避免 13mm Deckel 導致工件(50mm)無法放入而誤以為 3D 故障
+els.basketSelect.value=presets[0].id; // 400×300×96 自由
+applyBasketSelect();
+
+// --- calculation ---
+function calcFree(bL,bW,pL,pW,gap, effL, effW){
+  function countFor(pl,pw){
+    if(effL < pl || effW < pw) return {nx:0,ny:0,count:0, pl,pw};
+    let nx = Math.floor((effL + gap) / (pl + gap));
+    let ny = Math.floor((effW + gap) / (pw + gap));
+    while(nx>0 && (nx*pl + (nx-1)*gap) > effL) nx--;
+    while(ny>0 && (ny*pw + (ny-1)*gap) > effW) ny--;
+    return {nx, ny, count:nx*ny, pl, pw};
+  }
+  return countFor;
+}
+
+function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, wallGap, type, raster, divider){
+  if(pH > bH) return {count:0, reason:'工件高度 '+pH+' 超過籃具高度 '+bH+'，無法放入', isRaster:type!=='free'};
+  if(pL<=0||pW<=0||pH<=0||bL<=0||bW<=0) return {count:0, reason:'尺寸異常', isRaster:type!=='free'};
+  const wall = wallGap ? gap : 0;
+  const effL = bL - wall*2;
+  const effW = bW - wall*2;
+  const isRaster = type!=='free' && raster>0;
+  let freeBest=null;
+  if(isRaster){
+    freeBest = (()=>{ const fn=calcFree(bL,bW,pL,pW,gap,effL,effW); const a=fn(pL,pW); const b=allowRotate?fn(pW,pL):null; let best=a, ori='原始方向 (L×W)'; if(b && (b.count>best.count)) {best=b; ori='旋轉 90°';} return {...best, orientation:ori}; })();
+  }
+
+  function countRaster(pl,pw){
+    if(effL < pl || effW < pw) return {nx:0,ny:0,count:0, pl,pw};
+    // 每個工件+間隔 向上取整到 raster 倍數；最後一個工件不需尾隨 gap，但仍需對齊格線
+    // pitch = ceil((pl+gap)/raster)*raster， last = ceil(pl/raster)*raster
+    // 總長 = (nx-1)*pitch + last <= eff
+    const pitchL = Math.ceil((pl + gap)/raster)*raster;
+    const lastL = Math.ceil(pl/raster)*raster;
+    const pitchW = Math.ceil((pw + gap)/raster)*raster;
+    const lastW = Math.ceil(pw/raster)*raster;
+    // 隔板厚度造成額外佔用：若 divider>gap，pitch 需再加上 (divider - gap) 的取整？簡化：pitch = ceil((pl+Math.max(gap,divider))/raster)*raster
+    // 實際採用 max(gap,divider) 作為最小隔斷
+    // 重新計算若 divider>gap
+    // 為保持說明清晰，我們將 divider 視為 gap 的下限：effectiveGap = Math.max(gap, divider)
+    // 但型錄 divider 3mm < 預設 gap 5mm，故通常 gap 主導
+    // 若使用者設 gap<3，仍需 3mm 隔板
+    // 上面 pitch 已用 gap，若 divider>gap，再增加差值
+    let effPitchL = pitchL, effPitchW = pitchW;
+    // 若 divider > gap，補差
+    if(divider > gap){
+      // 需要額外 (divider-gap) 向上取整到 raster？實際隔板佔實體厚度，無法與 gap 重疊
+      // 簡化：pitch 直接用 ceil((pl+divider)/raster)*raster 與 ceil((pl+gap)/raster)*raster 取大
+      const pitchLD = Math.ceil((pl+divider)/raster)*raster;
+      const pitchWD = Math.ceil((pw+divider)/raster)*raster;
+      effPitchL = Math.max(pitchL, pitchLD);
+      effPitchW = Math.max(pitchW, pitchWD);
+    }
+    let nx=0, ny=0;
+    // brute force for nx
+    for(let n=1; n<=200; n++){
+      const need = (n-1)*effPitchL + lastL;
+      if(need <= effL) nx=n; else break;
+    }
+    for(let n=1; n<=200; n++){
+      const need = (n-1)*effPitchW + lastW;
+      if(need <= effW) ny=n; else break;
+    }
+    if(nx===0||ny===0) return {nx:0,ny:0,count:0, pl,pw, pitchL:effPitchL, pitchW:effPitchW, lastL, lastW};
+    return {nx, ny, count:nx*ny, pl, pw, pitchL:effPitchL, pitchW:effPitchW, lastL, lastW};
+  }
+
+  if(!isRaster){
+    const fn=calcFree(bL,bW,pL,pW,gap,effL,effW);
+    const a=fn(pL,pW);
+    let best=a; let orientation='原始方向 (L×W)';
+    if(allowRotate){
+      const b=fn(pW,pL);
+      if(b.count > best.count){ best=b; orientation='旋轉 90° (W×L)'; }
+      else if(b.count===best.count && b.count>0){ /* keep */ }
+    }
+    if(best.count===0) return {count:0, isRaster:false, reason:'平面空間不足'};
+    const usedL = best.nx*best.pl + (best.nx-1)*gap;
+    const usedW = best.ny*best.pw + (best.ny-1)*gap;
+    const util = (best.count*best.pl*best.pw)/(bL*bW)*100;
+    return {count:best.count, nx:best.nx, ny:best.ny, pl:best.pl, pw:best.pw, ph:pH, usedL, usedW, remainL:bL-usedL-wall*2, remainW:bW-usedW-wall*2, util, orientation, isRaster:false, effL, effW, wall, freeBest:null};
+  } else {
+    const a=countRaster(pL,pW);
+    let best=a; let orientation='原始方向 (L×W)';
+    if(allowRotate){
+      const b=countRaster(pW,pL);
+      if(b.count > best.count){ best=b; orientation='旋轉 90° (W×L)'; }
+    }
+    if(best.count===0) return {count:0, isRaster:true, reason:'Raster 限制下無法放入至少一個（需 '+Math.ceil(pL/raster)*raster+'×'+Math.ceil(pW/raster)*raster+' 網格）', raster, divider, freeBest};
+    // 用 raster pitch 計算佔用（包含最後對齊浪費）
+    const usedL = (best.nx-1)*best.pitchL + best.lastL;
+    const usedW = (best.ny-1)*best.pitchW + best.lastW;
+    // 實際工件佔用 vs 網格佔用
+    const utilReal = (best.count*best.pl*best.pw)/(bL*bW)*100;
+    const utilGrid = (usedL*usedW)/(bL*bW)*100;
+    const remainL = bL - usedL - wall*2;
+    const remainW = bW - usedW - wall*2;
+    return {
+      count:best.count, nx:best.nx, ny:best.ny, pl:best.pl, pw:best.pw, ph:pH,
+      usedL, usedW, remainL, remainW, util:utilReal, utilGrid, orientation,
+      isRaster:true, raster, divider, pitchL:best.pitchL, pitchW:best.pitchW, lastL:best.lastL, lastW:best.lastW,
+      effL, effW, wall, freeBest
+    };
+  }
+}
+
+// --- debug overlay ---
+function showError(msg){
+  const el=document.getElementById('errorBox');
+  if(el){ el.style.display='block'; el.textContent='⚠ 錯誤: '+msg; }
+  console.error(msg);
+}
+window.addEventListener('error', e=> showError(e.message+' @ '+(e.filename||'')+':'+e.lineno));
+window.addEventListener('unhandledrejection', e=> showError('Promise: '+(e.reason&&e.reason.message||e.reason)));
+
+// --- Three.js ---
+let scene, camera, renderer, controls, basketMesh, basketEdges, piecesGroup, gridGroup, dividerGroup;
+let wireframe=false, showDividers=true;
+function initThree(){
+  try{
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0f1117);
+  const viewer = document.getElementById('viewer');
+  let w=viewer.clientWidth, h=viewer.clientHeight;
+  if(!w || !h || w<50 || h<50){ w=Math.max(viewer.clientWidth||800,800); h=Math.max(viewer.clientHeight||500,500); console.warn('viewer size 0, fallback',w,h); }
+  camera = new THREE.PerspectiveCamera(42, w/h, 0.1, 8000);
+  camera.position.set(700, 550, 700);
+  renderer = new THREE.WebGLRenderer({canvas: els.canvas, antialias:true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  renderer.setSize(w,h,false);
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  if(typeof OrbitControls === "undefined" && typeof THREE.OrbitControls !== "undefined") { console.warn("OrbitControls fallback to THREE.OrbitControls"); var OrbitControls = THREE.OrbitControls; }
+  if(typeof OrbitControls === "undefined") throw new Error("OrbitControls �����J�A���ˬd libs/OrbitControls_umd.js");
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping=true; controls.dampingFactor=0.08;
+  controls.target.set(0,0,0);
+  controls.minDistance=50; controls.maxDistance=3000;
+  const ambient = new THREE.AmbientLight(0xffffff, 0.85); scene.add(ambient);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.1); dir.position.set(600,1000,400); dir.castShadow=true;
+  dir.shadow.mapSize.set(2048,2048); dir.shadow.camera.near=100; dir.shadow.camera.far=3000;
+  dir.shadow.camera.left=-800; dir.shadow.camera.right=800; dir.shadow.camera.top=800; dir.shadow.camera.bottom=-800;
+  scene.add(dir);
+  const fill = new THREE.DirectionalLight(0x8ea0ff, 0.35); fill.position.set(-400,600,-600); scene.add(fill);
+  const grid = new THREE.GridHelper(2000, 20, 0x2a2f45, 0x1e2335); grid.position.y=-0.1; scene.add(grid);
+  piecesGroup = new THREE.Group(); scene.add(piecesGroup);
+  gridGroup = new THREE.Group(); scene.add(gridGroup);
+  dividerGroup = new THREE.Group(); scene.add(dividerGroup);
+  window.addEventListener('resize', onResize);
+  animate();
+  }catch(err){ showError('initThree 失敗: '+err.message); console.error(err); }
+}
+function onResize(){ const v=document.getElementById('viewer'); let w=v.clientWidth,h=v.clientHeight; if(!w||!h){w=800;h=500;} camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
+function animate(){ requestAnimationFrame(animate); if(controls) controls.update(); renderer.render(scene,camera); }
+window.resetCamera=()=>{
+  if(!controls || !camera){ showError("controls �|����l�ơA�нT�{ libs/OrbitControls_umd.js ���J"); return; }
+  const bL=parseInt(els.basketL.value)||400, bW=parseInt(els.basketW.value)||300;
+  const maxDim=Math.max(bL,bW);
+  const dist = maxDim*1.9;
+  camera.position.set(dist*0.95, dist*0.85, dist*0.95);
+  controls.target.set(0,0,0); controls.update();
+};
+window.toggleWireframe=()=>{
+  wireframe=!wireframe;
+  els.wireBtn.textContent = wireframe? '實心顯示' : '線框切換';
+  piecesGroup.traverse(o=>{ if(o.isMesh){ o.material.wireframe=wireframe; }});
+};
+window.toggleDividers=()=>{
+  showDividers=!showDividers;
+  dividerGroup.visible=showDividers;
+  gridGroup.visible=showDividers;
+  els.dividerBtn.textContent = showDividers ? '隱藏隔板' : '顯示隔板';
+};
+
+function buildScene(bL,bW,bH, layout, gap){
+  try{
+  if(!scene || !piecesGroup){ console.warn('scene not ready'); return; }
+  if(basketMesh){ scene.remove(basketMesh); scene.remove(basketEdges); if(basketMesh.userData.bottom) scene.remove(basketMesh.userData.bottom); }
+  const toRemove=[]; scene.children.forEach(c=>{ if(c.userData && c.userData.isBasketPart) toRemove.push(c); }); toRemove.forEach(c=>scene.remove(c));
+  piecesGroup.clear(); gridGroup.clear(); dividerGroup.clear();
+
+  const basketGeo = new THREE.BoxGeometry(bL, bH, bW);
+  const basketMat = new THREE.MeshStandardMaterial({color:0x1e2a4a, transparent:true, opacity:0.16, roughness:0.6, metalness:0.1, side:THREE.DoubleSide});
+  basketMesh = new THREE.Mesh(basketGeo, basketMat); basketMesh.position.y=bH/2; scene.add(basketMesh);
+  const edges = new THREE.EdgesGeometry(basketGeo); const lineMat=new THREE.LineBasicMaterial({color:0x5a6b9a}); basketEdges=new THREE.LineSegments(edges,lineMat); basketEdges.position.copy(basketMesh.position); scene.add(basketEdges);
+  const bottomGeo=new THREE.BoxGeometry(bL-2,2,bW-2); const bottomMat=new THREE.MeshStandardMaterial({color:0x243055, roughness:0.8}); const bottom=new THREE.Mesh(bottomGeo,bottomMat); bottom.position.set(0,1,0); bottom.userData.isBasketPart=true; scene.add(bottom); basketMesh.userData.bottom=bottom;
+
+  // raster grid lines
+  if(layout.isRaster){
+    const raster=layout.raster;
+    // vertical lines along L
+    const y = 2.5; // slightly above bottom
+    const halfL=bL/2, halfW=bW/2;
+    // generate lines every raster
+    const lineColor=0x3a4a6a;
+    const mat=new THREE.LineBasicMaterial({color:lineColor, transparent:true, opacity:0.35});
+    // L direction (lines parallel to W)
+    for(let x=-halfL; x<=halfL; x+=raster){
+      const pts=[new THREE.Vector3(x, y, -halfW), new THREE.Vector3(x, y, halfW)];
+      const g=new THREE.BufferGeometry().setFromPoints(pts);
+      const l=new THREE.Line(g, mat); gridGroup.add(l);
+    }
+    for(let z=-halfW; z<=halfW; z+=raster){
+      const pts=[new THREE.Vector3(-halfL, y, z), new THREE.Vector3(halfL, y, z)];
+      const g=new THREE.BufferGeometry().setFromPoints(pts);
+      const l=new THREE.Line(g, mat); gridGroup.add(l);
+    }
+    // divider walls (actual partitions)
+    if(layout.count>0){
+      const dividerH = Math.min(bH*0.9, Math.max(28, bH-4)); // simulate Teilerhöhe 28/42/69/96
+      const thick = layout.divider || 3;
+      const totalL = (layout.nx-1)*layout.pitchL + layout.lastL;
+      const totalW = (layout.ny-1)*layout.pitchW + layout.lastW;
+      const offsetL = (bL - totalL)/2;
+      const offsetW = (bW - totalW)/2;
+      // longitudinal dividers (between rows along W)
+      // positions: at each pitch boundary except outer walls
+      // L-dividers: vertical planes at x = -halfL+offsetL + k*pitchL
+      for(let k=1;k<layout.nx;k++){
+        const x = -halfL + offsetL + k*layout.pitchL - (layout.pitchL - layout.lastL - (layout.pitchL-layout.lastL)/2); // approximate center of divider gap
+        // Simpler: place divider at middle of gap between workpieces
+        const gapCenter = -halfL + offsetL + (k-1)*layout.pitchL + layout.lastL + (layout.pitchL - layout.lastL)/2;
+        // create thin box
+        const geo=new THREE.BoxGeometry(thick, dividerH, totalW);
+        const matD=new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
+        const mesh=new THREE.Mesh(geo, matD);
+        mesh.position.set(gapCenter, dividerH/2+2, 0);
+        dividerGroup.add(mesh);
+      }
+      for(let k=1;k<layout.ny;k++){
+        const gapCenter = -halfW + offsetW + (k-1)*layout.pitchW + layout.lastW + (layout.pitchW - layout.lastW)/2;
+        const geo=new THREE.BoxGeometry(totalL, dividerH, thick);
+        const matD=new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
+        const mesh=new THREE.Mesh(geo, matD);
+        mesh.position.set(0, dividerH/2+2, gapCenter);
+        dividerGroup.add(mesh);
+      }
+    }
+  }
+
+  if(layout.count>0){
+    const pl=layout.pl, pw=layout.pw, ph=layout.ph;
+    const isRaster=layout.isRaster;
+    let totalL, totalW, pitchL, pitchW, lastL, lastW;
+    if(isRaster){
+      totalL = (layout.nx-1)*layout.pitchL + layout.lastL;
+      totalW = (layout.ny-1)*layout.pitchW + layout.lastW;
+      pitchL=layout.pitchL; pitchW=layout.pitchW; lastL=layout.lastL; lastW=layout.lastW;
+    } else {
+      const gapVal=parseInt(els.gap.value)||0;
+      totalL = layout.nx*pl + (layout.nx-1)*gapVal;
+      totalW = layout.ny*pw + (layout.ny-1)*gapVal;
+    }
+    const offsetL = (bL - totalL)/2;
+    const offsetW = (bW - totalW)/2;
+    for(let ix=0; ix<layout.nx; ix++){
+      for(let iz=0; iz<layout.ny; iz++){
+        let x,z;
+        if(isRaster){
+          // start of cell ix: -halfL+offsetL + ix*pitchL, workpiece centered in its cell (lastL centered)
+          const cellStartL = -bL/2 + offsetL + ix*pitchL;
+          const cellStartW = -bW/2 + offsetW + iz*pitchW;
+          x = cellStartL + pl/2 + (lastL - pl)/2; // center in allocated raster cell
+          z = cellStartW + pw/2 + (lastW - pw)/2;
+        } else {
+          const gapVal=parseInt(els.gap.value)||0;
+          x = -bL/2 + offsetL + pl/2 + ix*(pl+gapVal);
+          z = -bW/2 + offsetW + pw/2 + iz*(pw+gapVal);
+        }
+        const y = ph/2 + 2;
+        const geo=new THREE.BoxGeometry(pl, ph, pw);
+        const mat=new THREE.MeshStandardMaterial({color: isRaster?0x6ec1ff:0x4dabf7, roughness:0.5, metalness:0.08});
+        if(wireframe) mat.wireframe=true;
+        const mesh=new THREE.Mesh(geo, mat); mesh.position.set(x,y,z); mesh.castShadow=true; mesh.receiveShadow=true;
+        const eGeo=new THREE.EdgesGeometry(geo); const eMat=new THREE.LineBasicMaterial({color:0x0a1a33}); const lines=new THREE.LineSegments(eGeo,eMat); mesh.add(lines);
+        piecesGroup.add(mesh);
+      }
+    }
+  }
+  controls.target.set(0, bH*0.35, 0); controls.update();
+  els.infoPill.textContent = '籃具 '+bL+'×'+bW+'×'+bH+'  '+(layout.isRaster? layout.raster+'mm Raster':'自由')+'  工件 '+(layout.pl||'-')+'×'+(layout.pw||'-')+'×'+(layout.ph||'-')+'  間隔 '+gap+'mm';
+  }catch(err){ showError('buildScene 失敗: '+err.message); console.error(err); }
+}
+
+function computeAndRender(){
+  const bL=parseInt(els.basketL.value)||0, bW=parseInt(els.basketW.value)||0, bH=parseInt(els.basketH.value)||0;
+  const pL=parseInt(els.partL.value)||0, pW=parseInt(els.partW.value)||0, pH=parseInt(els.partH.value)||0;
+  const gap=parseInt(els.gap.value)||0;
+  const allowRotate=els.allowRotate.checked;
+  const wallGap=els.wallGap.checked;
+  const type=els.basketType.value;
+  const raster=parseInt(els.raster.value)||0;
+  const divider=parseFloat(els.dividerThick.value)||0;
+  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,wallGap,type,raster,divider);
+  if(layout.count>0){
+    els.resultNum.innerHTML = layout.count + ' <small>個</small>';
+    els.orientationBadge.textContent = layout.orientation;
+    els.orientationBadge.style.background='#1a2744'; els.orientationBadge.style.color='#8ec0ff';
+    if(layout.isRaster){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent=layout.raster+'mm Raster · 隔板'+layout.divider+'mm'; }
+    else els.rasterBadge.style.display='none';
+    let detail = '排列 '+layout.nx+' × '+layout.ny+'  (長向 '+layout.nx+' 個 × 寬向 '+layout.ny+' 個)<br>單個工件 '+layout.pl+'×'+layout.pw+'×'+layout.ph+' mm · 間隔 '+gap+'mm';
+    if(layout.isRaster) detail += ' · 取整至 '+layout.raster+'mm 網格（隔板 '+layout.divider+'mm）<br>每件佔據 '+layout.pitchL+'×'+layout.pitchW+' mm 網格（含間隔），最後件 '+layout.lastL+'×'+layout.lastW+' mm';
+    els.resultDetail.innerHTML=detail;
+    const floorUtil = layout.util.toFixed(1);
+    const volUtil = ((layout.count * layout.pl * layout.pw * layout.ph)/(bL*bW*bH)*100).toFixed(1);
+    let kvHtml = [
+      kv('平面利用率(工件)', floorUtil+'%'),
+      kv('體積利用率', volUtil+'%'),
+      kv('網格佔用尺寸', layout.usedL+' × '+layout.usedW+' mm'),
+      kv('剩餘空間', '長向 '+layout.remainL.toFixed(0)+' mm / 寬向 '+layout.remainW.toFixed(0)+' mm'),
+      kv('高度餘裕', (bH - pH)+' mm'),
+    ].join('');
+    if(layout.isRaster) kvHtml += kv('網格利用率(含隔板)', layout.utilGrid.toFixed(1)+'%');
+    els.resultKV.innerHTML=kvHtml;
+    if(layout.isRaster && layout.freeBest){
+      const loss = layout.freeBest.count - layout.count;
+      const lossPct = layout.freeBest.count ? ((loss/layout.freeBest.count)*100).toFixed(0) : 0;
+      els.compareBox.style.display='block';
+      if(loss>0){
+        els.compareBox.innerHTML = '<b>⚠ Raster 限制對比：</b>若為自由擺放可放 <b>'+layout.freeBest.count+' 個</b>（'+layout.freeBest.nx+'×'+layout.freeBest.ny+'），<br>受 '+layout.raster+'mm 網格+隔板限制後僅 '+layout.count+' 個，<b>少 '+loss+' 個（-'+lossPct+'%）</b>。'+
+          '<br><span style="color:#8b92a8">原因：每個工件+間隔需向上取整到 '+layout.raster+'mm 倍數（Deckel 600×400×13 為此類）</span>';
+      } else {
+        els.compareBox.innerHTML = '<b>✓ Raster 無損耗</b>：此工件尺寸剛好對齊 '+layout.raster+'mm 網格，自由與 Raster 數量一致 ('+layout.count+' 個)。';
+      }
+    } else {
+      els.compareBox.style.display='none';
+    }
+  } else {
+    els.resultNum.innerHTML = '0 <small>個</small>';
+    els.orientationBadge.textContent='無法擺放';
+    els.orientationBadge.style.background='#3a1a1a'; els.orientationBadge.style.color='#ffb0b0';
+    els.rasterBadge.style.display = layout.isRaster ? 'inline-block' : 'none';
+    if(layout.isRaster) els.rasterBadge.textContent= raster+'mm Raster';
+    els.resultDetail.textContent = layout.reason || '無法擺放';
+    els.resultKV.innerHTML = kv('籃具', bL+'×'+bW+'×'+bH+' mm'+(layout.isRaster?' · '+raster+'mm Raster':' · 自由')) + kv('工件', pL+'×'+pW+'×'+pH+' mm') + kv('間隔', gap+'mm');
+    if(layout.freeBest && layout.freeBest.count>0){
+      els.compareBox.style.display='block';
+      els.compareBox.innerHTML = '<b>自由擺放可放 '+layout.freeBest.count+' 個</b>，但 Raster 限制下無法放入。試著減小工件或間隔，或切換為自由籃具。';
+    } else els.compareBox.style.display='none';
+  }
+  buildScene(bL,bW,bH, layout, gap);
+}
+function kv(k,v){ return '<div class="kv"><span>'+k+'</span><span>'+v+'</span></div>'; }
+
+['input','change'].forEach(ev=>{
+  [els.basketL,els.basketW,els.basketH,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.wallGap,els.raster,els.dividerThick].forEach(el=>{
+    el.addEventListener(ev, computeAndRender);
+  });
+});
+els.basketSelect.addEventListener('change', applyBasketSelect);
+els.basketType.addEventListener('change', computeAndRender);
+
+if(location.protocol==='file:'){ const w=document.getElementById('fileWarn'); if(w) { w.style.display='block'; setTimeout(()=>w.style.display='none', 4000); } }
+initThree();
+computeAndRender();
+resetCamera();
+// 若 3D 仍空白，3秒後檢測 canvas 是否有內容
+setTimeout(()=>{
+  try{
+    const c=document.getElementById('canvas');
+    const gl=c.getContext('webgl')||c.getContext('webgl2');
+    if(!gl){ showError('WebGL 不可用，請換瀏覽器或檢查顯卡驅動'); }
+    else if(c.width===0 || c.height===0){ showError('Canvas 尺寸為 0，請檢查 #viewer 容器高度'); }
+  }catch(e){}
+}, 1500);
+</script>
+</body>
+</html>
