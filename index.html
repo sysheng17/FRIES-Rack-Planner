@@ -294,11 +294,6 @@ function deleteBasket(){
 }
 window.saveBasket=saveBasket; window.deleteBasket=deleteBasket; window.applyBasketSelect=applyBasketSelect;
 
-refreshBasketSelect();
-// 預設改為高度足夠的籃具，避免 13mm Deckel 導致工件(50mm)無法放入而誤以為 3D 故障
-els.basketSelect.value=presets[0].id; // 400×300×96 自由
-applyBasketSelect();
-
 // --- calculation ---
 function calcFree(bL,bW,pL,pW,gap, effL, effW){
   function countFor(pl,pw){
@@ -413,8 +408,8 @@ window.addEventListener('error', e=> showError(e.message+' @ '+(e.filename||'')+
 window.addEventListener('unhandledrejection', e=> showError('Promise: '+(e.reason&&e.reason.message||e.reason)));
 
 // --- Three.js ---
-let scene, camera, renderer, controls, basketMesh, basketEdges, piecesGroup, gridGroup, dividerGroup;
-let wireframe=false, showDividers=true;
+var scene, camera, renderer, controls, basketMesh, basketEdges, piecesGroup, gridGroup, dividerGroup;
+var wireframe=false, showDividers=true;
 function initThree(){
   try{
   scene = new THREE.Scene();
@@ -654,6 +649,14 @@ function kv(k,v){ return '<div class="kv"><span>'+k+'</span><span>'+v+'</span></
 els.basketSelect.addEventListener('change', applyBasketSelect);
 els.basketType.addEventListener('change', computeAndRender);
 
+initThree();
+refreshBasketSelect();
+// 預設改為高度足夠的籃具，避免 13mm Deckel 導致工件(50mm)無法放入而誤以為 3D 故障
+els.basketSelect.value=presets[0].id; // 400×300×96 自由
+applyBasketSelect();
+computeAndRender();
+resetCamera();
+if(location.protocol==='file:'){ const w=document.getElementById('fileWarn'); if(w) { w.style.display='block'; setTimeout(()=>w.style.display='none', 4000); } }
 
 // 若 3D 仍空白，3秒後檢測 canvas 是否有內容
 setTimeout(()=>{
