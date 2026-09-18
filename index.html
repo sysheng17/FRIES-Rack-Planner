@@ -63,7 +63,7 @@ main{flex:1;display:flex;min-height:0}
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
-  <span class="badge" id="versionBadge">v2.6 BEST</span>
+  <span class="badge" id="versionBadge">v2.7 VERT</span>
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn small" onclick="resetCamera()">重設視角</button>
     <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
@@ -128,6 +128,7 @@ main{flex:1;display:flex;min-height:0}
       <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="1" value="50"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="row"><label>間隔</label><input id="gap" type="number" min="0" step="1" value="5"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="checkRow"><input type="checkbox" id="allowRotate" checked><label for="allowRotate" style="cursor:pointer">允許工件水平旋轉 90° 自動擇優</label></div>
+      <div class="checkRow"><input type="checkbox" id="allowVerticalRotate"><label for="allowVerticalRotate" style="cursor:pointer">允許工件垂直旋轉 90° 自動擇優（高度可轉為長/寬）</label></div>
       <div class="checkRow"><input type="checkbox" id="wallGap"><label for="wallGap" style="cursor:pointer">籃具邊框也保留間隔（四周留白）</label></div>
       <div class="hint">間隔為工件之間最小距離。高度僅檢查是否放得下，不堆疊。</div>
     </div>
@@ -180,6 +181,7 @@ const els = {
   partH: document.getElementById('partH'),
   gap: document.getElementById('gap'),
   allowRotate: document.getElementById('allowRotate'),
+  allowVerticalRotate: document.getElementById('allowVerticalRotate'),
   wallGap: document.getElementById('wallGap'),
   resultNum: document.getElementById('resultNum'),
   resultDetail: document.getElementById('resultDetail'),
@@ -335,7 +337,7 @@ function calcFree(bL,bW,pL,pW,gap, effL, effW){
   return countFor;
 }
 
-function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, wallGap, type, raster, divider){
+function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider){
   if(pH > bH) return {count:0, reason:'工件高度 '+pH+' 超過籃具高度 '+bH+'，無法放入', isRaster:type!=='free'};
   if(pL<=0||pW<=0||pH<=0||bL<=0||bW<=0) return {count:0, reason:'尺寸異常', isRaster:type!=='free'};
   const wall = wallGap ? gap : 0;
@@ -387,26 +389,62 @@ function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, wallGap, type, raster, d
     return {nx, ny, count:nx*ny, pl, pw, pitchL:effPitchL, pitchW:effPitchW, lastL, lastW};
   }
 
+  // 產生候選方向：依是否允許垂直旋轉，枚舉所有可行擺放
+  function genCandidates(){
+    const list=[];
+    const add=(pl,pw,ph,desc)=>{
+      if(ph <= bH) list.push({pl,pw,ph,desc});
+    };
+    // 原始與水平旋轉
+    add(pL,pW,pH,'原始方向 (L×W)');
+    if(allowRotate) add(pW,pL,pH,'水平旋轉 90° (W×L)');
+    if(allowVerticalRotate){
+      // 以 pL 為高度
+      add(pW,pH,pL,'垂直旋轉 (H→W, L→H)');
+      add(pH,pW,pL,'垂直旋轉 (H→W, L→H) + 水平');
+      // 以 pW 為高度
+      add(pL,pH,pW,'垂直旋轉 (H→L, W→H)');
+      add(pH,pL,pW,'垂直旋轉 (H→L, W→H) + 水平');
+      // 以 pH 為高度的水平已含，其餘垂直組合已涵蓋
+      // 去重：若尺寸相等，避免重複
+    }
+    // 去重
+    const uniq=[];
+    const seen=new Set();
+    for(const c of list){
+      const k=c.pl+','+c.pw+','+c.ph;
+      if(!seen.has(k)){ seen.add(k); uniq.push(c); }
+    }
+    return uniq;
+  }
   if(!isRaster){
     const fn=calcFree(bL,bW,pL,pW,gap,effL,effW);
-    const a=fn(pL,pW);
-    let best=a; let orientation='原始方向 (L×W)';
-    if(allowRotate){
-      const b=fn(pW,pL);
-      if(b.count > best.count){ best=b; orientation='旋轉 90° (W×L)'; }
-      else if(b.count===best.count && b.count>0){ /* keep */ }
+    const candidates=genCandidates();
+    if(candidates.length===0) return {count:0, isRaster:false, reason:'垂直旋轉後高度仍超過籃具高度 '+bH};
+    let best=null; let orientation='';
+    for(const c of candidates){
+      const cur=fn(c.pl,c.pw);
+      // 需帶上 ph 與描述
+      const withPh={...cur, pl:c.pl, pw:c.pw, ph:c.ph, orientation:c.desc};
+      if(!best || withPh.count > best.count) { best=withPh; orientation=c.desc; }
     }
-    if(best.count===0) return {count:0, isRaster:false, reason:'平面空間不足'};
+    if(!best || best.count===0) return {count:0, isRaster:false, reason:'平面空間不足'};
     const usedL = best.nx*best.pl + (best.nx-1)*gap;
     const usedW = best.ny*best.pw + (best.ny-1)*gap;
     const util = (best.count*best.pl*best.pw)/(bL*bW)*100;
-    return {count:best.count, nx:best.nx, ny:best.ny, pl:best.pl, pw:best.pw, ph:pH, usedL, usedW, remainL:bL-usedL-wall*2, remainW:bW-usedW-wall*2, util, orientation, isRaster:false, effL, effW, wall, freeBest:null};
+    return {count:best.count, nx:best.nx, ny:best.ny, pl:best.pl, pw:best.pw, ph:best.ph, usedL, usedW, remainL:bL-usedL-wall*2, remainW:bW-usedW-wall*2, util, orientation, isRaster:false, effL, effW, wall, freeBest:null};
   } else {
-    const a=countRaster(pL,pW);
-    let best=a; let orientation='原始方向 (L×W)';
-    if(allowRotate){
-      const b=countRaster(pW,pL);
-      if(b.count > best.count){ best=b; orientation='旋轉 90° (W×L)'; }
+    const candidates=genCandidates();
+    // 對每個候選計算 raster 佈局
+    let best=null; let orientation='';
+    for(const c of candidates){
+      const cur=countRaster(c.pl,c.pw);
+      // countRaster 內部仍用外層 pH，需改為 c.ph；先修補 countRaster 使其支援 ph 參數
+      // 此處直接以 c.ph 覆蓋
+      const withPh={...cur, pl:c.pl, pw:c.pw, ph:c.ph, orientation:c.desc};
+      // 若 countRaster 因 raster 取整導致 0，跳過
+      if(withPh.count===0) continue;
+      if(!best || withPh.count > best.count){ best=withPh; orientation=c.desc; }
     }
     if(best.count===0) return {count:0, isRaster:true, reason:'Raster 限制下無法放入至少一個（需 '+Math.ceil(pL/raster)*raster+'×'+Math.ceil(pW/raster)*raster+' 網格）', raster, divider, freeBest};
     // 用 raster pitch 計算佔用（包含最後對齊浪費）
@@ -618,7 +656,7 @@ function computeAndRender(){
   const type=els.basketType.value;
   const raster=parseInt(els.raster.value)||0;
   const divider=parseFloat(els.dividerThick.value)||0;
-  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,wallGap,type,raster,divider);
+  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider);
   if(layout.count>0){
     els.resultNum.innerHTML = layout.count + ' <small>個</small>';
     els.orientationBadge.textContent = layout.orientation;
@@ -670,7 +708,7 @@ function computeAndRender(){
 function kv(k,v){ return '<div class="kv"><span>'+k+'</span><span>'+v+'</span></div>'; }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.wallGap,els.raster,els.dividerThick].forEach(el=>{
+  [els.basketL,els.basketW,els.basketH,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick].forEach(el=>{
     el.addEventListener(ev, computeAndRender);
   });
 });
