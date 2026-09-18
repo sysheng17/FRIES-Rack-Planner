@@ -62,8 +62,8 @@ main{flex:1;display:flex;min-height:0}
 <body>
 <header>
   <h1>籃具工件擺放計算</h1>
-  <span class="sub">不堆疊 · 最小間隔 · Raster隔板限制 · 3D 拖曳旋轉</span>
-  <span class="badge" id="versionBadge">v2.5 BEST</span>
+  <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
+  <span class="badge" id="versionBadge">v2.6 BEST</span>
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn small" onclick="resetCamera()">重設視角</button>
     <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
@@ -131,7 +131,7 @@ main{flex:1;display:flex;min-height:0}
     </div>
 
     <div class="card" id="resultBox">
-      <h3>📊 計算結果 <span class="badge" id="orientationBadge">-</span> <span class="badge warn" id="rasterBadge" style="display:none">Raster</span></h3>
+      <h3>📊 最佳擺放（最大數量） <span class="badge" id="orientationBadge">-</span> <span class="badge warn" id="rasterBadge" style="display:none">Raster</span></h3>
       <div id="resultNum">- <small>個</small></div>
       <div class="detail" id="resultDetail">調整參數後自動計算</div>
       <div class="divider"></div>
@@ -141,7 +141,7 @@ main{flex:1;display:flex;min-height:0}
   </div>
 
   <div id="viewer">
-    <div id="bestBadge" style="position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#4c6ef5;color:#fff;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;z-index:5;box-shadow:0 4px 12px rgba(0,0,0,0.3)">�̨���k���J��...</div>
+    <div id="bestBadge" style="position:absolute;left:50%;top:12px;transform:translateX(-50%);background:#4c6ef5;color:#fff;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;z-index:5;box-shadow:0 4px 12px rgba(0,0,0,0.3)">最佳擺法載入中...</div>
     <canvas id="canvas"></canvas>
     <div id="fileWarn" style="position:absolute;left:12px;top:60px;right:12px;background:#0f1f14;border:1px solid #2b5c3a;color:#8affb0;padding:8px 10px;border-radius:8px;font-size:11px;display:none;z-index:9">✓ 已支援 <b>file:// 直接開啟</b>（本地已內建 Three.js，無需 http 伺服器）</div>
     <div id="errorBox"></div>
@@ -160,8 +160,7 @@ main{flex:1;display:flex;min-height:0}
 </main>
 
 <script>
-// file:// compatible - using global THREE
-const OrbitControls = THREE.OrbitControls;
+// file:// compatible - using global THREE (OrbitControls already global from libs/OrbitControls_umd.js)
 
 const els = {
   basketSelect: document.getElementById('basketSelect'),
@@ -429,9 +428,9 @@ function initThree(){
   renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
   renderer.setSize(w,h,false);
   renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  if(typeof OrbitControls === "undefined" && typeof THREE.OrbitControls !== "undefined") { console.warn("OrbitControls fallback to THREE.OrbitControls"); var OrbitControls = THREE.OrbitControls; }
-  if(typeof OrbitControls === "undefined") throw new Error("OrbitControls �����J�A���ˬd libs/OrbitControls_umd.js");
-  controls = new OrbitControls(camera, renderer.domElement);
+  const OrbitControlsClass = window.OrbitControls || THREE.OrbitControls;
+  if(!OrbitControlsClass) throw new Error("OrbitControls 未載入，請檢查 libs/OrbitControls_umd.js");
+  controls = new OrbitControlsClass(camera, renderer.domElement);
   controls.enableDamping=true; controls.dampingFactor=0.08;
   controls.target.set(0,0,0);
   controls.minDistance=50; controls.maxDistance=3000;
@@ -452,7 +451,7 @@ function initThree(){
 function onResize(){ const v=document.getElementById('viewer'); let w=v.clientWidth,h=v.clientHeight; if(!w||!h){w=800;h=500;} camera.aspect=w/h; camera.updateProjectionMatrix(); renderer.setSize(w,h,false); }
 function animate(){ requestAnimationFrame(animate); if(controls) controls.update(); renderer.render(scene,camera); }
 window.resetCamera=()=>{
-  if(!controls || !camera){ showError("controls �|����l�ơA�нT�{ libs/OrbitControls_umd.js ���J"); return; }
+  if(!controls || !camera){ showError("controls 尚未初始化，請確認 libs/OrbitControls_umd.js 載入"); return; }
   const bL=parseInt(els.basketL.value)||400, bW=parseInt(els.basketW.value)||300;
   const maxDim=Math.max(bL,bW);
   const dist = maxDim*1.9;
@@ -578,6 +577,12 @@ function buildScene(bL,bW,bH, layout, gap){
   }
   controls.target.set(0, bH*0.35, 0); controls.update();
   els.infoPill.textContent = '籃具 '+bL+'×'+bW+'×'+bH+'  '+(layout.isRaster? layout.raster+'mm Raster':'自由')+'  工件 '+(layout.pl||'-')+'×'+(layout.pw||'-')+'×'+(layout.ph||'-')+'  間隔 '+gap+'mm';
+  const bb=document.getElementById('bestBadge');
+  if(bb){
+    if(layout.count>0) bb.textContent = '★ 最佳擺法：'+layout.nx+' × '+layout.ny+' = '+layout.count+' 個' + (layout.orientation.includes('旋轉') ? '（已旋轉擇優）' : '');
+    else bb.textContent = '無法擺放';
+    bb.style.background = layout.count>0 ? '#4c6ef5' : '#5c2b2b';
+  }
   }catch(err){ showError('buildScene 失敗: '+err.message); console.error(err); }
 }
 
@@ -597,7 +602,7 @@ function computeAndRender(){
     els.orientationBadge.style.background='#1a2744'; els.orientationBadge.style.color='#8ec0ff';
     if(layout.isRaster){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent=layout.raster+'mm Raster · 隔板'+layout.divider+'mm'; }
     else els.rasterBadge.style.display='none';
-    let detail = '排列 '+layout.nx+' × '+layout.ny+'  (長向 '+layout.nx+' 個 × 寬向 '+layout.ny+' 個)<br>單個工件 '+layout.pl+'×'+layout.pw+'×'+layout.ph+' mm · 間隔 '+gap+'mm';
+    let detail = '★ 最佳排列 '+layout.nx+' × '+layout.ny+'（長向 '+layout.nx+' × 寬向 '+layout.ny+'）= '+layout.count+' 個<br>單個工件 '+layout.pl+'×'+layout.pw+'×'+layout.ph+' mm · 間隔 '+gap+'mm';
     if(layout.isRaster) detail += ' · 取整至 '+layout.raster+'mm 網格（隔板 '+layout.divider+'mm）<br>每件佔據 '+layout.pitchL+'×'+layout.pitchW+' mm 網格（含間隔），最後件 '+layout.lastL+'×'+layout.lastW+' mm';
     els.resultDetail.innerHTML=detail;
     const floorUtil = layout.util.toFixed(1);
@@ -649,10 +654,7 @@ function kv(k,v){ return '<div class="kv"><span>'+k+'</span><span>'+v+'</span></
 els.basketSelect.addEventListener('change', applyBasketSelect);
 els.basketType.addEventListener('change', computeAndRender);
 
-if(location.protocol==='file:'){ const w=document.getElementById('fileWarn'); if(w) { w.style.display='block'; setTimeout(()=>w.style.display='none', 4000); } }
-initThree();
-computeAndRender();
-resetCamera();
+
 // 若 3D 仍空白，3秒後檢測 canvas 是否有內容
 setTimeout(()=>{
   try{
