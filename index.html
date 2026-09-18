@@ -63,7 +63,7 @@ main{flex:1;display:flex;min-height:0}
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
-  <span class="badge" id="versionBadge">v2.7 VERT</span>
+  <span class="badge" id="versionBadge">v2.8 TECHTRAY</span>
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn small" onclick="resetCamera()">重設視角</button>
     <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
@@ -127,8 +127,7 @@ main{flex:1;display:flex;min-height:0}
       <div class="row"><label>寬 W</label><input id="partW" type="number" min="1" step="1" value="100"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="1" value="50"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="row"><label>間隔</label><input id="gap" type="number" min="0" step="1" value="5"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="checkRow"><input type="checkbox" id="allowRotate" checked><label for="allowRotate" style="cursor:pointer">允許工件水平旋轉 90° 自動擇優</label></div>
-      <div class="checkRow"><input type="checkbox" id="allowVerticalRotate"><label for="allowVerticalRotate" style="cursor:pointer">允許工件垂直旋轉 90° 自動擇優（高度可轉為長/寬）</label></div>
+      <div class="checkRow"><input type="checkbox" id="allowVerticalRotate" checked><label for="allowVerticalRotate" style="cursor:pointer">允許工件垂直旋轉 90° 自動擇優（高度可轉為長/寬）</label></div>
       <div class="checkRow"><input type="checkbox" id="wallGap"><label for="wallGap" style="cursor:pointer">籃具邊框也保留間隔（四周留白）</label></div>
       <div class="hint">間隔為工件之間最小距離。高度僅檢查是否放得下，不堆疊。</div>
     </div>
@@ -180,7 +179,6 @@ const els = {
   partW: document.getElementById('partW'),
   partH: document.getElementById('partH'),
   gap: document.getElementById('gap'),
-  allowRotate: document.getElementById('allowRotate'),
   allowVerticalRotate: document.getElementById('allowVerticalRotate'),
   wallGap: document.getElementById('wallGap'),
   resultNum: document.getElementById('resultNum'),
@@ -651,7 +649,7 @@ function computeAndRender(){
   const bL=parseInt(els.basketL.value)||0, bW=parseInt(els.basketW.value)||0, bH=parseInt(els.basketH.value)||0;
   const pL=parseInt(els.partL.value)||0, pW=parseInt(els.partW.value)||0, pH=parseInt(els.partH.value)||0;
   const gap=parseInt(els.gap.value)||0;
-  const allowRotate=els.allowRotate.checked;
+  const allowRotate=true; // 水平旋轉默認啟用，已移除選項
   const wallGap=els.wallGap.checked;
   const type=els.basketType.value;
   const raster=parseInt(els.raster.value)||0;
@@ -708,7 +706,7 @@ function computeAndRender(){
 function kv(k,v){ return '<div class="kv"><span>'+k+'</span><span>'+v+'</span></div>'; }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick].forEach(el=>{
+  [els.basketL,els.basketW,els.basketH,els.partL,els.partW,els.partH,els.gap,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick].forEach(el=>{
     el.addEventListener(ev, computeAndRender);
   });
 });
@@ -720,7 +718,7 @@ els.basketW.addEventListener('input', updateHints);
 initThree();
 refreshBasketSelect();
 // 預設改為高度足夠的籃具，避免 13mm Deckel 導致工件(50mm)無法放入而誤以為 3D 故障
-els.basketSelect.value=presets[0].id; // 400×300×96 自由
+els.basketSelect.value='fries-techtray-425x276'; // 預設 TECHTRAY
 applyBasketSelect();
 computeAndRender();
 resetCamera();
