@@ -454,7 +454,7 @@ function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wal
     const remainL = bL - usedL - wall*2;
     const remainW = bW - usedW - wall*2;
     return {
-      count:best.count, nx:best.nx, ny:best.ny, pl:best.pl, pw:best.pw, ph:pH,
+      count:best.count, nx:best.nx, ny:best.ny, pl:best.pl, pw:best.pw, ph:best.ph,
       usedL, usedW, remainL, remainW, util:utilReal, utilGrid, orientation,
       isRaster:true, raster, divider, pitchL:best.pitchL, pitchW:best.pitchW, lastL:best.lastL, lastW:best.lastW,
       effL, effW, wall, freeBest
@@ -650,6 +650,7 @@ function computeAndRender(){
   const pL=parseInt(els.partL.value)||0, pW=parseInt(els.partW.value)||0, pH=parseInt(els.partH.value)||0;
   const gap=parseInt(els.gap.value)||0;
   const allowRotate=true; // 水平旋轉默認啟用，已移除選項
+  const allowVerticalRotate=els.allowVerticalRotate.checked;
   const wallGap=els.wallGap.checked;
   const type=els.basketType.value;
   const raster=parseInt(els.raster.value)||0;
