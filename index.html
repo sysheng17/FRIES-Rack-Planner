@@ -95,9 +95,10 @@ main{flex:1;display:flex;min-height:0}
         <span style="font-size:12px;color:#6c728a">mm</span>
       </div>
       <div class="row">
-        <label>高 H</label><input id="basketH" type="number" min="1" step="1" value="96">
+        <label>高 H</label><input id="basketH" type="number" min="1" step="1" value="96" placeholder="30/50/80/96">
         <span style="font-size:12px;color:#6c728a">mm</span>
       </div>
+      <div class="hint" id="techtrayHint" style="display:none">techtray 425×276 可選高度：<b>30 / 50 / 80 / 96 mm</b>（預設 96，支援 mm 級客製）</div>
       <div id="rasterBox" class="rasterBox hidden">
         <div style="font-size:11px;color:#8ec0ff;margin-bottom:6px"><b>Raster 隔板限制</b> — 參考 FRIES 2026 型錄 p.6-10 / p.74</div>
         <div class="row"><label>Raster</label><input id="raster" type="number" min="1" step="1" value="9"><span style="font-size:11px;color:#6c728a">mm</span></div>
@@ -199,7 +200,7 @@ const DEFAULT_PRESETS = [
   {id:'fries-variogrid-low-600x400x36', name:'FRIES variogrid + Toprahmen niedrig 600×400×36', L:600,W:400,H:36, type:'variogrid9', raster:9, divider:3},
   {id:'fries-variogrid-high-600x400x63', name:'FRIES variogrid + Toprahmen hoch 600×400×63', L:600,W:400,H:63, type:'variogrid9', raster:9, divider:3},
   {id:'fries-techrack-600x400x120', name:'FRIES tech-rack 600×400×120 (15mm)', L:600,W:400,H:120, type:'techrack15', raster:15, divider:3},
-  {id:'fries-techtray-425x276', name:'FRIES techtray 425×276 (9mm Schäfer)', L:425,W:276,H:30, type:'variogrid9', raster:9, divider:3},
+  {id:'fries-techtray-425x276', name:'FRIES techtray 425×276 (9mm Schäfer)', L:425,W:276,H:96, type:'variogrid9', raster:9, divider:3},
   {id:'preset-300x200x100', name:'小籃 300×200×100（自由）', L:300,W:200,H:100, type:'free', raster:0, divider:0},
 ];
 
@@ -233,6 +234,13 @@ function syncRasterBox(){
     if(r) els.raster.value = r;
     if(!els.dividerThick.value) els.dividerThick.value=3;
   }
+  updateTechtrayHint();
+}
+function updateTechtrayHint(){
+  const el=document.getElementById('techtrayHint');
+  if(!el) return;
+  const L=parseInt(els.basketL.value)||0, W=parseInt(els.basketW.value)||0;
+  el.style.display = (L===425 && W===276) ? 'block' : 'none';
 }
 els.basketType.addEventListener('change', syncRasterBox);
 
@@ -256,6 +264,7 @@ function applyBasketSelect(){
   if(p.raster) els.raster.value=p.raster; else els.raster.value=typeToRaster(p.type);
   els.dividerThick.value = p.divider ?? (p.type==='free'?0:3);
   syncRasterBox();
+  updateTechtrayHint();
   computeAndRender();
 }
 function saveBasket(){
@@ -648,6 +657,8 @@ function kv(k,v){ return '<div class="kv"><span>'+k+'</span><span>'+v+'</span></
 });
 els.basketSelect.addEventListener('change', applyBasketSelect);
 els.basketType.addEventListener('change', computeAndRender);
+els.basketL.addEventListener('input', updateTechtrayHint);
+els.basketW.addEventListener('input', updateTechtrayHint);
 
 initThree();
 refreshBasketSelect();
