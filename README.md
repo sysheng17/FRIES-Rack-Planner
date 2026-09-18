@@ -1,13 +1,13 @@
-# FriesArrangement - Äx¨ã¤u¥ó³Ì¨ÎÂ\©ñ 3D ®i¥Ü
+# FRIES-Rack-Planner - ï¿½xï¿½ï¿½uï¿½ï¿½Ì¨ï¿½ï¿½\ï¿½ï¿½ 3D ï¿½iï¿½ï¿½
 
-ª½±µÂùÀ» `index.html` §Y¥iÂ÷½u¶}±Ò¡]¤w¤º«Ø Three.js¡AµL»Ý http ¦øªA¾¹¡^¡C
+ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ `index.html` ï¿½Yï¿½iï¿½ï¿½ï¿½uï¿½}ï¿½Ò¡]ï¿½wï¿½ï¿½ï¿½ï¿½ Three.jsï¿½Aï¿½Lï¿½ï¿½ http ï¿½ï¿½ï¿½Aï¿½ï¿½ï¿½^ï¿½C
 
-- Äx¨ãªø¼e°ª¥i¿ï²M³æ¡B¦Û¥ÑÂX¥R¡]localStorage¡^
-- ¤u¥óªø¼e°ª 150¡Ñ100¡Ñ50 mm¡A¤£°ïÅ|¡A³Ì¤p¶¡¹j 5mm
-- ¦Û°Ê­pºâ³Ì¤j¼Æ¶q¡]¦Û¥Ñ?©ñ `floor((L+gap)/(p+gap))`¡^¨Ã¦Û°Ê¾ÜÀu 90¢X ±ÛÂà
-- FRIES 2026 «¬¿ý¤ä´©¡Gvariogrid/techtray 9mm / tech-rack 15mm Raster + 3mm ¹jªO¨ú¾ã¹ï¤ñ
-- 3D ©ì¦²±ÛÂà / ºu½üÁY©ñ / ¥kÁä¥­²¾¡AÅã¥Ü³Ì¨ÎÂ\ªk `nx ¡Ñ ny = N`
+- ï¿½xï¿½ï¿½ï¿½ï¿½eï¿½ï¿½ï¿½iï¿½ï¿½Mï¿½ï¿½Bï¿½Û¥ï¿½ï¿½Xï¿½Rï¿½]localStorageï¿½^
+- ï¿½uï¿½ï¿½ï¿½ï¿½eï¿½ï¿½ 150ï¿½ï¿½100ï¿½ï¿½50 mmï¿½Aï¿½ï¿½ï¿½ï¿½ï¿½|ï¿½Aï¿½Ì¤pï¿½ï¿½ï¿½j 5mm
+- ï¿½Û°Ê­pï¿½ï¿½Ì¤jï¿½Æ¶qï¿½]ï¿½Û¥ï¿½?ï¿½ï¿½ `floor((L+gap)/(p+gap))`ï¿½^ï¿½Ã¦Û°Ê¾ï¿½ï¿½u 90ï¿½X ï¿½ï¿½ï¿½ï¿½
+- FRIES 2026 ï¿½ï¿½ï¿½ï¿½ï¿½ä´©ï¿½Gvariogrid/techtray 9mm / tech-rack 15mm Raster + 3mm ï¿½jï¿½Oï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+- 3D ï¿½ì¦²ï¿½ï¿½ï¿½ï¿½ / ï¿½uï¿½ï¿½ï¿½Yï¿½ï¿½ / ï¿½kï¿½ä¥­ï¿½ï¿½ï¿½Aï¿½ï¿½Ü³Ì¨ï¿½ï¿½\ï¿½k `nx ï¿½ï¿½ ny = N`
 
-½u¤W¹wÄý¡G±Ò¥Î GitHub Pages (`Settings ¡÷ Pages ¡÷ Deploy from branch ¡÷ main / root`) «á `https://sysheng17.github.io/FriesArrangement/`
+ï¿½uï¿½Wï¿½wï¿½ï¿½ï¿½Gï¿½Ò¥ï¿½ GitHub Pages (`Settings ï¿½ï¿½ Pages ï¿½ï¿½ Deploy from branch ï¿½ï¿½ main / root`) ï¿½ï¿½ `https://sysheng17.github.io/FRIES-Rack-Planner/`
 
-°Ñ¦Ò¡G[FRIES 2026 Werkstucktrager Prospekt PDF](https://www.fries-kt.com/wp-content/uploads/2026_DE_FRIES-Werkstuecktraeger_Prospekt_web.pdf) p.6-10 / p.22-23 / p.74
+ï¿½Ñ¦Ò¡G[FRIES 2026 Werkstucktrager Prospekt PDF](https://www.fries-kt.com/wp-content/uploads/2026_DE_FRIES-Werkstuecktraeger_Prospekt_web.pdf) p.6-10 / p.22-23 / p.74
