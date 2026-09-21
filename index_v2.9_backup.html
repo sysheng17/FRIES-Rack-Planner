@@ -63,7 +63,7 @@ main{flex:1;display:flex;min-height:0}
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
-  <span class="badge" id="versionBadge">v3.0 STACK</span>
+  <span class="badge" id="versionBadge">v2.9 CAPACITY</span>
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn small" onclick="resetCamera()">重設視角</button>
     <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
@@ -99,11 +99,6 @@ main{flex:1;display:flex;min-height:0}
         <span style="font-size:12px;color:#6c728a">mm</span>
       </div>
       <div class="hint" id="heightHint">可選高度: 30/50/80/96 mm（預設最高）</div>
-      <div class="row">
-        <label>堆疊數</label><input id="stackCount" type="number" min="1" step="1" value="1">
-        <span style="font-size:12px;color:#6c728a">層</span>
-      </div>
-      <div class="hint" id="overallSize">整體尺寸: 425×276×96 mm（1 層，單層 96mm）</div>
       <div id="rasterBox" class="rasterBox hidden">
         <div style="font-size:11px;color:#8ec0ff;margin-bottom:6px"><b>Raster 隔板限制</b> — 參考 FRIES 2026 型錄 p.6-10 / p.74</div>
         <div class="row"><label>Raster</label><input id="raster" type="number" min="1" step="1" value="9"><span style="font-size:11px;color:#6c728a">mm</span></div>
@@ -186,8 +181,6 @@ const els = {
   basketL: document.getElementById('basketL'),
   basketW: document.getElementById('basketW'),
   basketH: document.getElementById('basketH'),
-  stackCount: document.getElementById('stackCount'),
-  overallSize: document.getElementById('overallSize'),
   basketName: document.getElementById('basketName'),
   basketCountBadge: document.getElementById('basketCountBadge'),
   rasterBox: document.getElementById('rasterBox'),
@@ -283,11 +276,6 @@ function updateHints(){
     const isFRIES = p && p.type!=='free';
     dEl.textContent = isFRIES ? '預設 3 mm（FRIES Teilerstärke）' : '預設 0 mm（自由擺放無隔板）';
   }
-}
-function updateOverallSize(){
-  const L=parseInt(els.basketL.value)||0, W=parseInt(els.basketW.value)||0, H=parseInt(els.basketH.value)||0, n=Math.max(1, parseInt(els.stackCount.value)||1);
-  const overallH=H*n;
-  if(els.overallSize) els.overallSize.textContent = `整體尺寸: ${L}×${W}×${overallH} mm（${n} 層，單層 ${H}mm）`;
 }
 els.basketType.addEventListener('change', syncRasterBox);
 
@@ -559,28 +547,16 @@ window.toggleDividers=()=>{
 
 function buildScene(bL,bW,bH, layout, gap){
   try{
-  const stackCount=Math.max(1, parseInt(els.stackCount.value)||1);
-  const overallH=bH*stackCount;
   if(!scene || !piecesGroup){ console.warn('scene not ready'); return; }
   if(basketMesh){ scene.remove(basketMesh); scene.remove(basketEdges); if(basketMesh.userData.bottom) scene.remove(basketMesh.userData.bottom); }
   const toRemove=[]; scene.children.forEach(c=>{ if(c.userData && c.userData.isBasketPart) toRemove.push(c); }); toRemove.forEach(c=>scene.remove(c));
   piecesGroup.clear(); gridGroup.clear(); dividerGroup.clear();
 
-  // 建立堆疊籃具
-  const allBaskets=[];
-  for(let s=0;s<stackCount;s++){
-    const yBase=s*bH;
-    const basketGeo = new THREE.BoxGeometry(bL, bH, bW);
-    const basketMat = new THREE.MeshStandardMaterial({color:0x1e2a4a, transparent:true, opacity:0.16, roughness:0.6, metalness:0.1, side:THREE.DoubleSide});
-    const m=new THREE.Mesh(basketGeo, basketMat); m.position.y=yBase + bH/2; scene.add(m);
-    if(s===0) basketMesh=m;
-    allBaskets.push(m);
-    const edges = new THREE.EdgesGeometry(basketGeo); const lineMat=new THREE.LineBasicMaterial({color:0x5a6b9a}); const e=new THREE.LineSegments(edges,lineMat); e.position.copy(m.position); scene.add(e);
-    if(s===0) basketEdges=e;
-    const bottomGeo=new THREE.BoxGeometry(bL-2,2,bW-2); const bottomMat=new THREE.MeshStandardMaterial({color:0x243055, roughness:0.8}); const bottom=new THREE.Mesh(bottomGeo,bottomMat); bottom.position.set(0,yBase+1,0); bottom.userData.isBasketPart=true; scene.add(bottom);
-    if(s===0) basketMesh.userData.bottom=bottom;
-  }
-  // 為了相容舊邏輯，保留 basketMesh 為第一層
+  const basketGeo = new THREE.BoxGeometry(bL, bH, bW);
+  const basketMat = new THREE.MeshStandardMaterial({color:0x1e2a4a, transparent:true, opacity:0.16, roughness:0.6, metalness:0.1, side:THREE.DoubleSide});
+  basketMesh = new THREE.Mesh(basketGeo, basketMat); basketMesh.position.y=bH/2; scene.add(basketMesh);
+  const edges = new THREE.EdgesGeometry(basketGeo); const lineMat=new THREE.LineBasicMaterial({color:0x5a6b9a}); basketEdges=new THREE.LineSegments(edges,lineMat); basketEdges.position.copy(basketMesh.position); scene.add(basketEdges);
+  const bottomGeo=new THREE.BoxGeometry(bL-2,2,bW-2); const bottomMat=new THREE.MeshStandardMaterial({color:0x243055, roughness:0.8}); const bottom=new THREE.Mesh(bottomGeo,bottomMat); bottom.position.set(0,1,0); bottom.userData.isBasketPart=true; scene.add(bottom); basketMesh.userData.bottom=bottom;
 
   // raster grid lines
   if(layout.isRaster){
@@ -650,34 +626,32 @@ function buildScene(bL,bW,bH, layout, gap){
     }
     const offsetL = (bL - totalL)/2;
     const offsetW = (bW - totalW)/2;
-    for(let s=0;s<stackCount;s++){
-      const yBase=s*bH;
-      for(let ix=0; ix<layout.nx; ix++){
-        for(let iz=0; iz<layout.ny; iz++){
-          let x,z;
-          if(isRaster){
-            const cellStartL = -bL/2 + offsetL + ix*pitchL;
-            const cellStartW = -bW/2 + offsetW + iz*pitchW;
-            x = cellStartL + pl/2 + (lastL - pl)/2;
-            z = cellStartW + pw/2 + (lastW - pw)/2;
-          } else {
-            const gapVal=parseInt(els.gap.value)||0;
-            x = -bL/2 + offsetL + pl/2 + ix*(pl+gapVal);
-            z = -bW/2 + offsetW + pw/2 + iz*(pw+gapVal);
-          }
-          const y = yBase + ph/2 + 2;
-          const geo=new THREE.BoxGeometry(pl, ph, pw);
-          const mat=new THREE.MeshStandardMaterial({color: isRaster?0x6ec1ff:0x4dabf7, roughness:0.5, metalness:0.08});
-          if(wireframe) mat.wireframe=true;
-          const mesh=new THREE.Mesh(geo, mat); mesh.position.set(x,y,z); mesh.castShadow=true; mesh.receiveShadow=true;
-          const eGeo=new THREE.EdgesGeometry(geo); const eMat=new THREE.LineBasicMaterial({color:0x0a1a33}); const lines=new THREE.LineSegments(eGeo,eMat); mesh.add(lines);
-          piecesGroup.add(mesh);
+    for(let ix=0; ix<layout.nx; ix++){
+      for(let iz=0; iz<layout.ny; iz++){
+        let x,z;
+        if(isRaster){
+          // start of cell ix: -halfL+offsetL + ix*pitchL, workpiece centered in its cell (lastL centered)
+          const cellStartL = -bL/2 + offsetL + ix*pitchL;
+          const cellStartW = -bW/2 + offsetW + iz*pitchW;
+          x = cellStartL + pl/2 + (lastL - pl)/2; // center in allocated raster cell
+          z = cellStartW + pw/2 + (lastW - pw)/2;
+        } else {
+          const gapVal=parseInt(els.gap.value)||0;
+          x = -bL/2 + offsetL + pl/2 + ix*(pl+gapVal);
+          z = -bW/2 + offsetW + pw/2 + iz*(pw+gapVal);
         }
+        const y = ph/2 + 2;
+        const geo=new THREE.BoxGeometry(pl, ph, pw);
+        const mat=new THREE.MeshStandardMaterial({color: isRaster?0x6ec1ff:0x4dabf7, roughness:0.5, metalness:0.08});
+        if(wireframe) mat.wireframe=true;
+        const mesh=new THREE.Mesh(geo, mat); mesh.position.set(x,y,z); mesh.castShadow=true; mesh.receiveShadow=true;
+        const eGeo=new THREE.EdgesGeometry(geo); const eMat=new THREE.LineBasicMaterial({color:0x0a1a33}); const lines=new THREE.LineSegments(eGeo,eMat); mesh.add(lines);
+        piecesGroup.add(mesh);
       }
     }
   }
-  controls.target.set(0, overallH*0.35, 0); controls.update();
-  els.infoPill.textContent = '籃具 '+bL+'×'+bW+'×'+bH+' ×'+stackCount+'層='+overallH+'mm  '+(layout.isRaster? layout.raster+'mm Raster':'自由')+'  工件 '+(layout.pl||'-')+'×'+(layout.pw||'-')+'×'+(layout.ph||'-')+'  間隔 '+gap+'mm';
+  controls.target.set(0, bH*0.35, 0); controls.update();
+  els.infoPill.textContent = '籃具 '+bL+'×'+bW+'×'+bH+'  '+(layout.isRaster? layout.raster+'mm Raster':'自由')+'  工件 '+(layout.pl||'-')+'×'+(layout.pw||'-')+'×'+(layout.ph||'-')+'  間隔 '+gap+'mm';
   const bb=document.getElementById('bestBadge');
   if(bb){
     if(layout.count>0) bb.textContent = '★ 最佳擺法：'+layout.nx+' × '+layout.ny+' = '+layout.count+' 個' + (layout.orientation.includes('旋轉') ? '（已旋轉擇優）' : '');
@@ -767,7 +741,7 @@ function updateCapacity(perBasket){
 }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick].forEach(el=>{
+  [els.basketL,els.basketW,els.basketH,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays].forEach(el=>{
     el.addEventListener(ev, computeAndRender);
   });
 });
@@ -775,9 +749,6 @@ els.basketSelect.addEventListener('change', applyBasketSelect);
 els.basketType.addEventListener('change', computeAndRender);
 els.basketL.addEventListener('input', updateHints);
 els.basketW.addEventListener('input', updateHints);
-els.stackCount.addEventListener('input', updateOverallSize);
-els.stackCount.addEventListener('change', updateOverallSize);
-els.basketH.addEventListener('input', updateOverallSize);
 
 initThree();
 refreshBasketSelect();
