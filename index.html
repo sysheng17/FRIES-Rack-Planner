@@ -63,7 +63,7 @@ main{flex:1;display:flex;min-height:0}
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
-  <span class="badge" id="versionBadge">v3.1 STACK</span>
+  <span class="badge" id="versionBadge">v3.2 STACK</span>
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn small" onclick="resetCamera()">重設視角</button>
     <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
@@ -582,55 +582,52 @@ function buildScene(bL,bW,bH, layout, gap){
   }
   // 為了相容舊邏輯，保留 basketMesh 為第一層
 
-  // raster grid lines
+  // raster grid lines & dividers per layer
   if(layout.isRaster){
     const raster=layout.raster;
-    // vertical lines along L
-    const y = 2.5; // slightly above bottom
     const halfL=bL/2, halfW=bW/2;
-    // generate lines every raster
     const lineColor=0x3a4a6a;
     const mat=new THREE.LineBasicMaterial({color:lineColor, transparent:true, opacity:0.35});
-    // L direction (lines parallel to W)
-    for(let x=-halfL; x<=halfL; x+=raster){
-      const pts=[new THREE.Vector3(x, y, -halfW), new THREE.Vector3(x, y, halfW)];
-      const g=new THREE.BufferGeometry().setFromPoints(pts);
-      const l=new THREE.Line(g, mat); gridGroup.add(l);
+    for(let s=0;s<stackCount;s++){
+      const y = s*bH + 2.5;
+      for(let x=-halfL; x<=halfL; x+=raster){
+        const pts=[new THREE.Vector3(x, y, -halfW), new THREE.Vector3(x, y, halfW)];
+        const g=new THREE.BufferGeometry().setFromPoints(pts);
+        const l=new THREE.Line(g, mat); gridGroup.add(l);
+      }
+      for(let z=-halfW; z<=halfW; z+=raster){
+        const pts=[new THREE.Vector3(-halfL, y, z), new THREE.Vector3(halfL, y, z)];
+        const g=new THREE.BufferGeometry().setFromPoints(pts);
+        const l=new THREE.Line(g, mat); gridGroup.add(l);
+      }
     }
-    for(let z=-halfW; z<=halfW; z+=raster){
-      const pts=[new THREE.Vector3(-halfL, y, z), new THREE.Vector3(halfL, y, z)];
-      const g=new THREE.BufferGeometry().setFromPoints(pts);
-      const l=new THREE.Line(g, mat); gridGroup.add(l);
-    }
-    // divider walls (actual partitions)
+    // divider walls per layer
     if(layout.count>0){
-      const dividerH = Math.min(bH*0.9, Math.max(28, bH-4)); // simulate Teilerhöhe 28/42/69/96
+      const dividerH = Math.min(bH*0.9, Math.max(28, bH-4));
       const thick = layout.divider || 3;
       const totalL = (layout.nx-1)*layout.pitchL + layout.lastL;
       const totalW = (layout.ny-1)*layout.pitchW + layout.lastW;
       const offsetL = (bL - totalL)/2;
       const offsetW = (bW - totalW)/2;
-      // longitudinal dividers (between rows along W)
-      // positions: at each pitch boundary except outer walls
-      // L-dividers: vertical planes at x = -halfL+offsetL + k*pitchL
-      for(let k=1;k<layout.nx;k++){
-        const x = -halfL + offsetL + k*layout.pitchL - (layout.pitchL - layout.lastL - (layout.pitchL-layout.lastL)/2); // approximate center of divider gap
-        // Simpler: place divider at middle of gap between workpieces
-        const gapCenter = -halfL + offsetL + (k-1)*layout.pitchL + layout.lastL + (layout.pitchL - layout.lastL)/2;
-        // create thin box
-        const geo=new THREE.BoxGeometry(thick, dividerH, totalW);
-        const matD=new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
-        const mesh=new THREE.Mesh(geo, matD);
-        mesh.position.set(gapCenter, dividerH/2+2, 0);
-        dividerGroup.add(mesh);
-      }
-      for(let k=1;k<layout.ny;k++){
-        const gapCenter = -halfW + offsetW + (k-1)*layout.pitchW + layout.lastW + (layout.pitchW - layout.lastW)/2;
-        const geo=new THREE.BoxGeometry(totalL, dividerH, thick);
-        const matD=new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
-        const mesh=new THREE.Mesh(geo, matD);
-        mesh.position.set(0, dividerH/2+2, gapCenter);
-        dividerGroup.add(mesh);
+      // longitudinal dividers per layer
+      for(let s=0;s<stackCount;s++){
+        const yBaseDiv=s*bH;
+        for(let k=1;k<layout.nx;k++){
+          const gapCenter = -halfL + offsetL + (k-1)*layout.pitchL + layout.lastL + (layout.pitchL - layout.lastL)/2;
+          const geo=new THREE.BoxGeometry(thick, dividerH, totalW);
+          const matD=new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
+          const mesh=new THREE.Mesh(geo, matD);
+          mesh.position.set(gapCenter, yBaseDiv + dividerH/2+2, 0);
+          dividerGroup.add(mesh);
+        }
+        for(let k=1;k<layout.ny;k++){
+          const gapCenter = -halfW + offsetW + (k-1)*layout.pitchW + layout.lastW + (layout.pitchW - layout.lastW)/2;
+          const geo=new THREE.BoxGeometry(totalL, dividerH, thick);
+          const matD=new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
+          const mesh=new THREE.Mesh(geo, matD);
+          mesh.position.set(0, yBaseDiv + dividerH/2+2, gapCenter);
+          dividerGroup.add(mesh);
+        }
       }
     }
   }
@@ -680,7 +677,8 @@ function buildScene(bL,bW,bH, layout, gap){
   els.infoPill.textContent = '籃具 '+bL+'×'+bW+'×'+bH+' ×'+stackCount+'層='+overallH+'mm  '+(layout.isRaster? layout.raster+'mm Raster':'自由')+'  工件 '+(layout.pl||'-')+'×'+(layout.pw||'-')+'×'+(layout.ph||'-')+'  間隔 '+gap+'mm';
   const bb=document.getElementById('bestBadge');
   if(bb){
-    if(layout.count>0) bb.textContent = '★ 最佳擺法：'+layout.nx+' × '+layout.ny+' = '+layout.count+' 個' + (layout.orientation.includes('旋轉') ? '（已旋轉擇優）' : '');
+    const totalCount=layout.count*stackCount;
+    if(layout.count>0) bb.textContent = '★ 最佳擺法：每層 '+layout.nx+'×'+layout.ny+'='+layout.count+' 個，'+stackCount+'層共 '+totalCount+' 個' + (layout.orientation.includes('旋轉') ? '（已旋轉擇優）' : '');
     else bb.textContent = '無法擺放';
     bb.style.background = layout.count>0 ? '#4c6ef5' : '#5c2b2b';
   }
@@ -688,6 +686,7 @@ function buildScene(bL,bW,bH, layout, gap){
 }
 
 function computeAndRender(){
+  updateOverallSize();
   const bL=parseInt(els.basketL.value)||0, bW=parseInt(els.basketW.value)||0, bH=parseInt(els.basketH.value)||0;
   const pL=parseInt(els.partL.value)||0, pW=parseInt(els.partW.value)||0, pH=parseInt(els.partH.value)||0;
   const gap=parseInt(els.gap.value)||0;
@@ -697,6 +696,8 @@ function computeAndRender(){
   const type=els.basketType.value;
   const raster=parseInt(els.raster.value)||0;
   const divider=parseFloat(els.dividerThick.value)||0;
+  const stackCount=Math.max(1, parseInt(els.stackCount.value)||1);
+  const overallH=bH*stackCount;
   const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider);
   if(layout.count>0){
     els.resultNum.innerHTML = layout.count + ' <small>個</small>';
@@ -704,17 +705,21 @@ function computeAndRender(){
     els.orientationBadge.style.background='#1a2744'; els.orientationBadge.style.color='#8ec0ff';
     if(layout.isRaster){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent=layout.raster+'mm Raster · 隔板'+layout.divider+'mm'; }
     else els.rasterBadge.style.display='none';
-    let detail = '★ 最佳排列 '+layout.nx+' × '+layout.ny+'（長向 '+layout.nx+' × 寬向 '+layout.ny+'）= '+layout.count+' 個<br>單個工件 '+layout.pl+'×'+layout.pw+'×'+layout.ph+' mm · 間隔 '+gap+'mm';
+    const totalCount=layout.count*stackCount;
+    let detail = '★ 最佳排列 每層 '+layout.nx+' × '+layout.ny+' = '+layout.count+' 個，'+stackCount+'層共 '+totalCount+' 個<br>（長向 '+layout.nx+' × 寬向 '+layout.ny+'）<br>單個工件 '+layout.pl+'×'+layout.pw+'×'+layout.ph+' mm · 間隔 '+gap+'mm';
     if(layout.isRaster) detail += ' · 取整至 '+layout.raster+'mm 網格（隔板 '+layout.divider+'mm）<br>每件佔據 '+layout.pitchL+'×'+layout.pitchW+' mm 網格（含間隔），最後件 '+layout.lastL+'×'+layout.lastW+' mm';
     els.resultDetail.innerHTML=detail;
     const floorUtil = layout.util.toFixed(1);
     const volUtil = ((layout.count * layout.pl * layout.pw * layout.ph)/(bL*bW*bH)*100).toFixed(1);
     let kvHtml = [
+      kv('每層數量', layout.nx+'×'+layout.ny+' = '+layout.count+' 個'),
+      kv('堆疊總數', stackCount+'層 × '+layout.count+' = '+totalCount+' 個'),
       kv('平面利用率(工件)', floorUtil+'%'),
       kv('體積利用率', volUtil+'%'),
       kv('網格佔用尺寸', layout.usedL+' × '+layout.usedW+' mm'),
       kv('剩餘空間', '長向 '+layout.remainL.toFixed(0)+' mm / 寬向 '+layout.remainW.toFixed(0)+' mm'),
-      kv('高度餘裕', (bH - pH)+' mm'),
+      kv('高度餘裕(單層)', (bH - layout.ph)+' mm'),
+      kv('整體高度', bH+'×'+stackCount+' = '+overallH+' mm'),
     ].join('');
     if(layout.isRaster) kvHtml += kv('網格利用率(含隔板)', layout.utilGrid.toFixed(1)+'%');
     els.resultKV.innerHTML=kvHtml;
@@ -745,24 +750,37 @@ function computeAndRender(){
     } else els.compareBox.style.display='none';
   }
   buildScene(bL,bW,bH, layout, gap);
+  // 確保 bestBadge 即使 WebGL 失敗也能更新
+  const bb2=document.getElementById('bestBadge');
+  if(bb2){
+    const stackCountLocal=Math.max(1, parseInt(els.stackCount.value)||1);
+    const totalCount2=layout.count*stackCountLocal;
+    if(layout.count>0) bb2.textContent = '★ 最佳擺法：每層 '+layout.nx+'×'+layout.ny+'='+layout.count+' 個，'+stackCountLocal+'層共 '+totalCount2+' 個' + (layout.orientation.includes('旋轉') ? '（已旋轉擇優）' : '');
+    else bb2.textContent = '無法擺放';
+    bb2.style.background = layout.count>0 ? '#4c6ef5' : '#5c2b2b';
+  }
   updateCapacity(layout.count);
 }
 function kv(k,v){ return '<div class="kv"><span>'+k+'</span><span>'+v+'</span></div>'; }
 
 function updateCapacity(perBasket){
+  const stackCount=Math.max(1, parseInt(els.stackCount.value)||1);
+  const totalPerBasket=perBasket*stackCount;
   const dailyHours=parseFloat(els.dailyHours.value)||8;
   const cleanTime=parseFloat(els.cleanTime.value)||25;
   const workDays=parseInt(els.workDays.value)||22;
   const dailyMinutes=dailyHours*60;
   const cyclesPerDay=cleanTime>0?Math.floor(dailyMinutes/cleanTime):0;
-  const perDay=cyclesPerDay*perBasket;
+  const perDay=cyclesPerDay*totalPerBasket;
   const perMonth=perDay*workDays;
   const fmt=n=>n.toLocaleString('zh-TW');
   els.capacityKV.innerHTML=[
-    kv('每籃工件數', fmt(perBasket)+' 個'),
+    kv('每層工件數', fmt(perBasket)+' 個'),
+    kv('堆疊層數', fmt(stackCount)+' 層'),
+    kv('每籃(堆疊)總數', fmt(totalPerBasket)+' 個'),
     kv('每日清洗次數', fmt(cyclesPerDay)+' 次 ('+dailyMinutes+'÷'+cleanTime+')'),
     kv('每日產能', fmt(perDay)+' 個'),
-    kv('每月產能', '<b style="color:#4dabf7">'+fmt(perMonth)+' 個</b> ('+workDays+'天)'),
+    kv('每月產能', '<b style="color:#4dabf7">'+fmt(perMonth)+' 個</b> ('+workDays+'天×'+totalPerBasket+'/籃)'),
   ].join('');
 }
 
