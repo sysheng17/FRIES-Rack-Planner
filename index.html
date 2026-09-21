@@ -63,7 +63,7 @@ main{flex:1;display:flex;min-height:0}
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
-  <span class="badge" id="versionBadge">v3.0 STACK</span>
+  <span class="badge" id="versionBadge">v3.1 STACK</span>
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn small" onclick="resetCamera()">重設視角</button>
     <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
@@ -500,7 +500,7 @@ window.addEventListener('error', e=> showError(e.message+' @ '+(e.filename||'')+
 window.addEventListener('unhandledrejection', e=> showError('Promise: '+(e.reason&&e.reason.message||e.reason)));
 
 // --- Three.js ---
-var scene, camera, renderer, controls, basketMesh, basketEdges, piecesGroup, gridGroup, dividerGroup;
+var scene, camera, renderer, controls, basketMesh, basketEdges, piecesGroup, gridGroup, dividerGroup, basketGroup;
 var wireframe=false, showDividers=true;
 function initThree(){
   try{
@@ -531,6 +531,7 @@ function initThree(){
   piecesGroup = new THREE.Group(); scene.add(piecesGroup);
   gridGroup = new THREE.Group(); scene.add(gridGroup);
   dividerGroup = new THREE.Group(); scene.add(dividerGroup);
+  basketGroup = new THREE.Group(); scene.add(basketGroup);
   window.addEventListener('resize', onResize);
   animate();
   }catch(err){ showError('initThree 失敗: '+err.message); console.error(err); }
@@ -561,9 +562,8 @@ function buildScene(bL,bW,bH, layout, gap){
   try{
   const stackCount=Math.max(1, parseInt(els.stackCount.value)||1);
   const overallH=bH*stackCount;
-  if(!scene || !piecesGroup){ console.warn('scene not ready'); return; }
-  if(basketMesh){ scene.remove(basketMesh); scene.remove(basketEdges); if(basketMesh.userData.bottom) scene.remove(basketMesh.userData.bottom); }
-  const toRemove=[]; scene.children.forEach(c=>{ if(c.userData && c.userData.isBasketPart) toRemove.push(c); }); toRemove.forEach(c=>scene.remove(c));
+  if(!scene || !piecesGroup || !basketGroup){ console.warn('scene not ready'); return; }
+  basketGroup.clear();
   piecesGroup.clear(); gridGroup.clear(); dividerGroup.clear();
 
   // 建立堆疊籃具
@@ -572,12 +572,12 @@ function buildScene(bL,bW,bH, layout, gap){
     const yBase=s*bH;
     const basketGeo = new THREE.BoxGeometry(bL, bH, bW);
     const basketMat = new THREE.MeshStandardMaterial({color:0x1e2a4a, transparent:true, opacity:0.16, roughness:0.6, metalness:0.1, side:THREE.DoubleSide});
-    const m=new THREE.Mesh(basketGeo, basketMat); m.position.y=yBase + bH/2; scene.add(m);
+    const m=new THREE.Mesh(basketGeo, basketMat); m.position.y=yBase + bH/2; basketGroup.add(m);
     if(s===0) basketMesh=m;
     allBaskets.push(m);
-    const edges = new THREE.EdgesGeometry(basketGeo); const lineMat=new THREE.LineBasicMaterial({color:0x5a6b9a}); const e=new THREE.LineSegments(edges,lineMat); e.position.copy(m.position); scene.add(e);
+    const edges = new THREE.EdgesGeometry(basketGeo); const lineMat=new THREE.LineBasicMaterial({color:0x5a6b9a}); const e=new THREE.LineSegments(edges,lineMat); e.position.copy(m.position); basketGroup.add(e);
     if(s===0) basketEdges=e;
-    const bottomGeo=new THREE.BoxGeometry(bL-2,2,bW-2); const bottomMat=new THREE.MeshStandardMaterial({color:0x243055, roughness:0.8}); const bottom=new THREE.Mesh(bottomGeo,bottomMat); bottom.position.set(0,yBase+1,0); bottom.userData.isBasketPart=true; scene.add(bottom);
+    const bottomGeo=new THREE.BoxGeometry(bL-2,2,bW-2); const bottomMat=new THREE.MeshStandardMaterial({color:0x243055, roughness:0.8}); const bottom=new THREE.Mesh(bottomGeo,bottomMat); bottom.position.set(0,yBase+1,0); basketGroup.add(bottom);
     if(s===0) basketMesh.userData.bottom=bottom;
   }
   // 為了相容舊邏輯，保留 basketMesh 為第一層
