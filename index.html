@@ -805,7 +805,7 @@ function updateCapacity(perBasket){
 }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick].forEach(el=>{
+  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays].forEach(el=>{
     el.addEventListener(ev, computeAndRender);
   });
 });
