@@ -63,7 +63,7 @@ main{flex:1;display:flex;min-height:0}
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
-  <span class="badge" id="versionBadge">v3.3 STACK</span>
+  <span class="badge" id="versionBadge">v3.4 HEIGHT</span>
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn small" onclick="resetCamera()">重設視角</button>
     <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
@@ -95,10 +95,27 @@ main{flex:1;display:flex;min-height:0}
         <span style="font-size:12px;color:#6c728a">mm</span>
       </div>
       <div class="row">
-        <label>高 H</label><input id="basketH" type="number" min="1" step="1" value="96" placeholder="30/50/80/96">
+        <label>高 H</label><input id="basketH" type="number" min="1" step="1" value="96" placeholder="30/50/80/96" list="heightOptions">
         <span style="font-size:12px;color:#6c728a">mm</span>
       </div>
+      <datalist id="heightOptions">
+        <option value="13"></option>
+        <option value="28"></option>
+        <option value="30"></option>
+        <option value="36"></option>
+        <option value="42"></option>
+        <option value="50"></option>
+        <option value="63"></option>
+        <option value="69"></option>
+        <option value="80"></option>
+        <option value="96"></option>
+        <option value="100"></option>
+        <option value="120"></option>
+        <option value="150"></option>
+        <option value="200"></option>
+      </datalist>
       <div class="hint" id="heightHint">可選高度: 30/50/80/96 mm（預設最高）</div>
+      <div class="hint" style="color:#8ec0ff">所有籃具可選高度：<b>13</b>(Deckel) · <b>28/42/69/96</b>(Teiler) · <b>30/50/80/96/100</b>(標準) · <b>36/63</b>(Toprahmen) · <b>70-230</b>(tech-rack，mm級客製) — 直接輸入或下拉選擇</div>
       <div class="row">
         <label>堆疊數</label><input id="stackCount" type="number" min="1" max="100" step="1" value="1">
         <span style="font-size:12px;color:#6c728a">層（上限 100）</span>
