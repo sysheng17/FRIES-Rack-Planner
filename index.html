@@ -63,7 +63,7 @@ main{flex:1;display:flex;min-height:0}
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
-  <span class="badge" id="versionBadge">v3.2 STACK</span>
+  <span class="badge" id="versionBadge">v3.3 STACK</span>
   <div style="margin-left:auto;display:flex;gap:8px">
     <button class="btn small" onclick="resetCamera()">重設視角</button>
     <button class="btn small" onclick="toggleWireframe()" id="wireBtn">線框切換</button>
@@ -100,8 +100,8 @@ main{flex:1;display:flex;min-height:0}
       </div>
       <div class="hint" id="heightHint">可選高度: 30/50/80/96 mm（預設最高）</div>
       <div class="row">
-        <label>堆疊數</label><input id="stackCount" type="number" min="1" step="1" value="1">
-        <span style="font-size:12px;color:#6c728a">層</span>
+        <label>堆疊數</label><input id="stackCount" type="number" min="1" max="100" step="1" value="1">
+        <span style="font-size:12px;color:#6c728a">層（上限 100）</span>
       </div>
       <div class="hint" id="overallSize">整體尺寸: 425×276×96 mm（1 層，單層 96mm）</div>
       <div id="rasterBox" class="rasterBox hidden">
@@ -285,9 +285,12 @@ function updateHints(){
   }
 }
 function updateOverallSize(){
-  const L=parseInt(els.basketL.value)||0, W=parseInt(els.basketW.value)||0, H=parseInt(els.basketH.value)||0, n=Math.max(1, parseInt(els.stackCount.value)||1);
+  let nRaw=parseInt(els.stackCount.value);
+  if(isNaN(nRaw) || nRaw<1){ nRaw=1; els.stackCount.value=1; }
+  else if(nRaw>100){ nRaw=100; els.stackCount.value=100; }
+  const L=parseInt(els.basketL.value)||0, W=parseInt(els.basketW.value)||0, H=parseInt(els.basketH.value)||0, n=Math.min(100, Math.max(1, nRaw));
   const overallH=H*n;
-  if(els.overallSize) els.overallSize.textContent = `整體尺寸: ${L}×${W}×${overallH} mm（${n} 層，單層 ${H}mm）`;
+  if(els.overallSize) els.overallSize.textContent = `整體尺寸: ${L}×${W}×${overallH} mm（${n} 層，單層 ${H}mm）` + (n===100 ? '（已達上限）' : '');
 }
 els.basketType.addEventListener('change', syncRasterBox);
 
@@ -560,7 +563,7 @@ window.toggleDividers=()=>{
 
 function buildScene(bL,bW,bH, layout, gap){
   try{
-  const stackCount=Math.max(1, parseInt(els.stackCount.value)||1);
+  const stackCount=Math.min(100, Math.max(1, parseInt(els.stackCount.value)||1));
   const overallH=bH*stackCount;
   if(!scene || !piecesGroup || !basketGroup){ console.warn('scene not ready'); return; }
   basketGroup.clear();
@@ -696,7 +699,7 @@ function computeAndRender(){
   const type=els.basketType.value;
   const raster=parseInt(els.raster.value)||0;
   const divider=parseFloat(els.dividerThick.value)||0;
-  const stackCount=Math.max(1, parseInt(els.stackCount.value)||1);
+  const stackCount=Math.min(100, Math.max(1, parseInt(els.stackCount.value)||1));
   const overallH=bH*stackCount;
   const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider);
   if(layout.count>0){
@@ -753,7 +756,7 @@ function computeAndRender(){
   // 確保 bestBadge 即使 WebGL 失敗也能更新
   const bb2=document.getElementById('bestBadge');
   if(bb2){
-    const stackCountLocal=Math.max(1, parseInt(els.stackCount.value)||1);
+    const stackCountLocal=Math.min(100, Math.max(1, parseInt(els.stackCount.value)||1));
     const totalCount2=layout.count*stackCountLocal;
     if(layout.count>0) bb2.textContent = '★ 最佳擺法：每層 '+layout.nx+'×'+layout.ny+'='+layout.count+' 個，'+stackCountLocal+'層共 '+totalCount2+' 個' + (layout.orientation.includes('旋轉') ? '（已旋轉擇優）' : '');
     else bb2.textContent = '無法擺放';
@@ -764,7 +767,7 @@ function computeAndRender(){
 function kv(k,v){ return '<div class="kv"><span>'+k+'</span><span>'+v+'</span></div>'; }
 
 function updateCapacity(perBasket){
-  const stackCount=Math.max(1, parseInt(els.stackCount.value)||1);
+  const stackCount=Math.min(100, Math.max(1, parseInt(els.stackCount.value)||1));
   const totalPerBasket=perBasket*stackCount;
   const dailyHours=parseFloat(els.dailyHours.value)||8;
   const cleanTime=parseFloat(els.cleanTime.value)||25;
