@@ -149,9 +149,9 @@ main{flex:1;display:flex;min-height:0}
 
     <div class="card">
       <h3>📦 工件尺寸（不可堆疊）</h3>
-      <div class="row"><label>長 L</label><input id="partL" type="number" min="1" step="1" value="150"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>寬 W</label><input id="partW" type="number" min="1" step="1" value="100"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="1" value="50"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>長 L</label><input id="partL" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>寬 W</label><input id="partW" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="0.1" value="23.5"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="row"><label>間隔</label><input id="gap" type="number" min="0" step="1" value="5"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="checkRow"><input type="checkbox" id="allowRotate" checked><label for="allowRotate" style="cursor:pointer">允許工件水平旋轉 90° 自動擇優</label></div>
       <div class="checkRow"><input type="checkbox" id="allowVerticalRotate" checked><label for="allowVerticalRotate" style="cursor:pointer">允許工件垂直旋轉 90° 自動擇優（高度可轉為長/寬）</label></div>
@@ -978,10 +978,28 @@ function buildScene(bL,bW,bH, layout, gap){
         const colPosition = -halfL + (k-1)*pitchL + lastL/2;
         // 標籤放在籃具前方，每層稍微抬高一點點以避免重疊
         const labelPosX = colPosition;
-        const labelPosZ = -halfW - 25 - s * 3; // 階層間距 -3mm
-        const labelGeo = new THREE.PlaneGeometry(25, 10);
+        const labelPosZ = -halfW - 20 - s * 3; // 階層間距 -3mm
+        const labelGeo = new THREE.PlaneGeometry(15, 8); // 細字體: 15x8
         const labelMesh = new THREE.Mesh(labelGeo, colLabelMat);
-        labelMesh.position.set(labelPosX, y + 8, labelPosZ);
+        labelMesh.position.set(labelPosX, y + 6, labelPosZ);
+        labelMesh.rotation.x = -Math.PI/2;
+        gridGroup.add(labelMesh);
+      }
+      
+      // 新增：標示橫向行號 (W方向) - 每層皆顯示
+      // 使用 pitch 計算位置
+      const pitchW = layout.pitchW;
+      const lastW = layout.lastW;
+      const rowLabelMat = new THREE.MeshBasicMaterial({color:0xf0f0f0, transparent:true, opacity:0.9});
+      for(let k=1; k<layout.ny; k++){
+        // 計算第 k 行 divider 的位置
+        const rowPosition = -halfW + (k-1)*pitchW + lastW/2;
+        // 標籤放在籃具右側
+        const labelPosX = halfL + 20; // 籃具右方
+        const labelPosZ = rowPosition;
+        const labelGeo = new THREE.PlaneGeometry(15, 8); // 細字體: 15x8
+        const labelMesh = new THREE.Mesh(labelGeo, rowLabelMat);
+        labelMesh.position.set(labelPosX, y + 6, labelPosZ);
         labelMesh.rotation.x = -Math.PI/2;
         gridGroup.add(labelMesh);
       }
@@ -1222,7 +1240,7 @@ function buildScene(bL,bW,bH, layout, gap){
 function computeAndRender(){
   updateOverallSize();
   const bL=parseInt(els.basketL.value)||0, bW=parseInt(els.basketW.value)||0, bH=parseInt(els.basketH.value)||0;
-  const pL=parseInt(els.partL.value)||0, pW=parseInt(els.partW.value)||0, pH=parseInt(els.partH.value)||0;
+  const pL=parseFloat(els.partL.value)||0, pW=parseFloat(els.partW.value)||0, pH=parseFloat(els.partH.value)||0;
   const gap=parseInt(els.gap.value)||0;
   const allowRotate=els.allowRotate.checked;
   const allowVerticalRotate=els.allowVerticalRotate.checked;
