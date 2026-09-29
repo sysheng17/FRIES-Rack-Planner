@@ -120,6 +120,10 @@ main{flex:1;display:flex;min-height:0}
         <label>堆疊數</label><input id="stackCount" type="number" min="1" max="100" step="1" value="1">
         <span style="font-size:12px;color:#6c728a">層（上限 100）</span>
       </div>
+      <div class="row">
+        <label>角落柱尺寸</label><input id="cornerColumnSize" type="number" min="0" step="5" value="0"><span style="font-size:12px;color:#6c728a">mm（0=無，四角柱子占用空間，實際可放空間更小）</span>
+      </div>
+      <div class="hint" id="cornerColumnHint" style="display:none">注：角落柱子會減少有效放置區域，計算會自動扣除邊框兩側的柱子寬度。tech-rack custom 400×300 等規格建議開啟固定格數模式以獲得更精確的佈局。</div>
       <div class="hint" id="overallSize">整體尺寸: 425×276×96 mm（1 層，單層 96mm）</div>
       <div id="rasterBox" class="rasterBox hidden">
         <div style="font-size:11px;color:#8ec0ff;margin-bottom:6px"><b>Raster 隔板限制</b> — 參考 FRIES 2026 型錄 p.6-10 / p.74</div>
@@ -216,6 +220,7 @@ const els = {
   basketW: document.getElementById('basketW'),
   basketH: document.getElementById('basketH'),
   stackCount: document.getElementById('stackCount'),
+  cornerColumnSize: document.getElementById('cornerColumnSize'),
   overallSize: document.getElementById('overallSize'),
   basketName: document.getElementById('basketName'),
   basketCountBadge: document.getElementById('basketCountBadge'),
@@ -307,7 +312,7 @@ function updateHints(){
     'fries-variogrid-low-600x400x36': 'Toprahmen 低 36 mm，Teiler 28/42/69/96 mm',
     'fries-variogrid-high-600x400x63': 'Toprahmen 高 63 mm，Teiler 28/42/69/96 mm',
     'fries-techrack-600x400x120': 'tech-rack 可選高度 70-230 mm（此預設最高 120，支援 mm 級客製）',
-    'fries-techtray-425x276': '可選高度: 30/50/80/96 mm（預設最高 96）'
+    'fries-techtray-425x276': '可選 Teiler 高度: 28/42/69/96 mm（預設最高 96）',
   };
   if(hEl){
     const key=p? p.id : '';
@@ -436,13 +441,14 @@ function calcFree(bL,bW,pL,pW,gap, effL, effW){
   return countFor;
 }
 
-function calcSlotMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRotate, wallGap, slotsL, slotsW, dividerThick){
+function calcSlotMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRotate, wallGap, slotsL, slotsW, dividerThick, cornerColumnSize){
   // 格數模式：指定長/寬向格數（如 19×27），計算每格淨尺寸，再算每格能放幾個工件
   // 邏輯：每格淨尺寸 = (籃具尺寸 - (格數-1)×隔板厚 - 邊框間隔×2) / 格數
   // 每格內再按自由擺放邏輯計算可放工件數
+  const ccs = cornerColumnSize || 0;
   const wall = wallGap ? gap : 0;
-  const effL = bL - wall*2;
-  const effW = bW - wall*2;
+  const effL = bL - wall*2 - ccs*2;
+  const effW = bW - wall*2 - ccs*2;
   const thick = dividerThick || 3;
 
   // 計算每格淨可用尺寸（扣除隔板厚度後平均分配）
@@ -529,12 +535,13 @@ function calcSlotMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRot
   };
 }
 
-function calcFixedGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRotate, wallGap, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW){
+function calcFixedGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRotate, wallGap, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW, cornerColumnSize){
   // 固定格數模式：指定長/寬向格數，隔板自動對齊 Raster 倍數位置（平均分配）
   // 單元格內用間隔排版，工件不跨越隔板
+  const ccs = cornerColumnSize || 0;
   const wall = wallGap ? gap : 0;
-  const effL = bL - wall*2;
-  const effW = bW - wall*2;
+  const effL = bL - wall*2 - ccs*2;
+  const effW = bW - wall*2 - ccs*2;
   const thick = fixedGridDividerThick || 3;
   const raster = fixedGridRaster || 9;
 
@@ -685,18 +692,20 @@ function calcFixedGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVertic
   };
 }
 
-function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider, useFixedGridMode, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW){
+function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider, useFixedGridMode, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW, cornerColumnSize){
   if(pH > bH) return {count:0, reason:'工件高度 '+pH+' 超過籃具高度 '+bH+'，無法放入', isRaster:type!=='free'};
   if(pL<=0||pW<=0||pH<=0||bL<=0||bW<=0) return {count:0, reason:'尺寸異常', isRaster:type!=='free'};
   
+  const ccs = cornerColumnSize || 0;
+  const wall = wallGap ? gap : 0;
+  const effL = bL - wall*2 - ccs*2;
+  const effW = bW - wall*2 - ccs*2;
+  
   // 固定格數模式優先
   if(useFixedGridMode && slotsL > 0 && slotsW > 0){
-    return calcFixedGridMode(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW);
+    return calcFixedGridMode(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW, ccs);
   }
 
-  const wall = wallGap ? gap : 0;
-  const effL = bL - wall*2;
-  const effW = bW - wall*2;
   const isRaster = type!=='free' && raster>0;
   let freeBest=null;
   if(isRaster){
@@ -910,25 +919,76 @@ function buildScene(bL,bW,bH, layout, gap){
   }
   // 為了相容舊邏輯，保留 basketMesh 為第一層
 
-  // raster grid lines & dividers per layer
+  // 新增：四個角落的柱子（占用空間，縮小可放工件區域）
+  const cornerSize = 20; // 角落柱子尺寸 mm
+  const columnMat = new THREE.MeshStandardMaterial({color:0xc2a84b, roughness:0.8});
+  for(let s=0;s<stackCount;s++){
+    const yBaseDiv=s*bH;
+    // 四個角落：前左、前右、後左、後右
+    // 前左
+    const colGeo = new THREE.BoxGeometry(cornerSize, bH, cornerSize);
+    const col = new THREE.Mesh(colGeo, columnMat);
+    col.position.set(-bL/2 + cornerSize/2, yBaseDiv + bH/2, -bW/2 + cornerSize/2);
+    basketGroup.add(col);
+    // 前右
+    const col2 = new THREE.Mesh(colGeo, columnMat);
+    col2.position.set(-bL/2 + cornerSize/2, yBaseDiv + bH/2, bW/2 - cornerSize/2);
+    basketGroup.add(col2);
+    // 後左
+    const col3 = new THREE.Mesh(colGeo, columnMat);
+    col3.position.set(bL/2 - cornerSize/2, yBaseDiv + bH/2, -bW/2 + cornerSize/2);
+    basketGroup.add(col3);
+    // 後右
+    const col4 = new THREE.Mesh(colGeo, columnMat);
+    col4.position.set(bL/2 - cornerSize/2, yBaseDiv + bH/2, bW/2 - cornerSize/2);
+    basketGroup.add(col4);
+  }
+
+// raster grid lines & dividers per layer
   if(layout.isRaster){
     const raster=layout.raster;
     const halfL=bL/2, halfW=bW/2;
     const lineColor=0x3a4a6a;
-    const mat=new THREE.LineBasicMaterial({color:lineColor, transparent:true, opacity:0.35});
+    
+    // 建立孔洞標記材質
+    const holeMat = new THREE.MeshBasicMaterial({color:0x3a4a6a, transparent:true, opacity:0.8});
+    const holeSize = raster * 0.4; // 孔洞大小
+    
     for(let s=0;s<stackCount;s++){
       const y = s*bH + 2.5;
+      
+      // 繪製每個網格孔洞 - 洞洞板效果
       for(let x=-halfL; x<=halfL; x+=raster){
-        const pts=[new THREE.Vector3(x, y, -halfW), new THREE.Vector3(x, y, halfW)];
-        const g=new THREE.BufferGeometry().setFromPoints(pts);
-        const l=new THREE.Line(g, mat); gridGroup.add(l);
+        for(let z=-halfW; z<=halfW; z+=raster){
+          // 畫一個小方塊作為孔洞標記
+          const holeGeo = new THREE.BoxGeometry(holeSize, holeSize, holeSize);
+          const hole = new THREE.Mesh(holeGeo, holeMat);
+          hole.position.set(x, y, z);
+          gridGroup.add(hole);
+        }
       }
-      for(let z=-halfW; z<=halfW; z+=raster){
-        const pts=[new THREE.Vector3(-halfL, y, z), new THREE.Vector3(halfL, y, z)];
-        const g=new THREE.BufferGeometry().setFromPoints(pts);
-        const l=new THREE.Line(g, mat); gridGroup.add(l);
+      
+      // 新增：標示縱向柱號 (L方向)
+      // 使用 pitch 計算位置
+      const pitchL = layout.pitchL;
+      const lastL = layout.lastL;
+      const colLabelMat = new THREE.MeshBasicMaterial({color:0xf0f0f0, transparent:true, opacity:0.9});
+      for(let k=1; k<layout.nx; k++){
+        // 計算第 k 列 divider 的位置
+        // 位置 = -halfL + offsetL + (k-1)*pitchL + lastL/2
+        // 簡化：使用 pitch 間隔從 -halfL 開始
+        const colPosition = -halfL + (k-1)*pitchL + lastL/2;
+        // 標籤放在籃具前方
+        const labelPosX = colPosition;
+        const labelPosZ = -halfW - 25; // 籃具前方
+        const labelGeo = new THREE.PlaneGeometry(25, 10);
+        const labelMesh = new THREE.Mesh(labelGeo, colLabelMat);
+        labelMesh.position.set(labelPosX, y + 8, labelPosZ);
+        labelMesh.rotation.x = -Math.PI/2;
+        gridGroup.add(labelMesh);
       }
     }
+    
     // divider walls per layer
     if(layout.count>0){
       const dividerH = Math.min(bH*0.9, Math.max(28, bH-4));
@@ -1182,7 +1242,7 @@ function computeAndRender(){
   const slotsL = parseInt(els.fixedGridSlotsL.value)||0;
   const slotsW = parseInt(els.fixedGridSlotsW.value)||0;
 
-  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider, useFixedGridMode, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW);
+  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider, useFixedGridMode, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW, parseInt(els.cornerColumnSize.value)||0);
   if(layout.count>0){
     els.resultNum.innerHTML = layout.count + ' <small>個</small>';
     els.orientationBadge.textContent = layout.orientation;
@@ -1277,7 +1337,7 @@ function updateCapacity(perBasket){
 }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.fixedGridMode, els.fixedGridRaster, els.fixedGridSlotsL, els.fixedGridSlotsW, els.fixedGridDividerThick].forEach(el=>{
+  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.fixedGridMode, els.fixedGridRaster, els.fixedGridSlotsL, els.fixedGridSlotsW, els.fixedGridDividerThick, els.cornerColumnSize].forEach(el=>{
     if(el) el.addEventListener(ev, computeAndRender);
   });
 });
