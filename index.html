@@ -154,13 +154,16 @@ main{flex:1;display:flex;min-height:0}
       <div class="checkRow"><input type="checkbox" id="wallGap"><label for="wallGap" style="cursor:pointer">籃具邊框也保留間隔（四周留白）</label></div>
       <div class="divider"></div>
       <div class="card" style="margin-top:8px;padding:10px;background:#1a1f2e;border:1px dashed #3a4a6a;border-radius:8px">
-        <h4 style="font-size:12px;color:#8ec0ff;margin-bottom:8px">📐 格數規劃模式（如 tech-rack custom 19×27 格）</h4>
-        <div class="checkRow"><input type="checkbox" id="slotMode" onchange="toggleSlotMode()"><label for="slotMode" style="cursor:pointer">啟用格數規劃：指定長/寬向格數，自動計算每格尺寸與最大工件數</label></div>
+        <h4 style="font-size:12px;color:#8ec0ff;margin-bottom:8px">📐 格數規劃模式（自動優化 / 手動指定）</h4>
+        <div class="checkRow"><input type="checkbox" id="slotMode" onchange="toggleSlotMode()"><label for="slotMode" style="cursor:pointer">啟用格數規劃：以隔板分隔格子，計算最大工件數</label></div>
         <div id="slotInputs" style="display:none;margin-top:8px">
-          <div class="row"><label>長向格數</label><input id="slotsL" type="number" min="1" max="50" step="1" value="19"><span style="font-size:12px;color:#6c728a">個（如 19）</span></div>
-          <div class="row"><label>寬向格數</label><input id="slotsW" type="number" min="1" max="50" step="1" value="27"><span style="font-size:12px;color:#6c728a">個（如 27）</span></div>
+          <div class="checkRow"><input type="checkbox" id="slotAuto" onchange="toggleSlotAuto()"><label for="slotAuto" style="cursor:pointer">自動優化格數（搜尋最佳 長向×寬向 組合，使總工件數最大）</label></div>
+          <div id="slotManualInputs" style="margin-top:8px">
+            <div class="row"><label>長向格數</label><input id="slotsL" type="number" min="1" max="50" step="1" value="19"><span style="font-size:12px;color:#6c728a">個（如 19）</span></div>
+            <div class="row"><label>寬向格數</label><input id="slotsW" type="number" min="1" max="50" step="1" value="27"><span style="font-size:12px;color:#6c728a">個（如 27）</span></div>
+          </div>
           <div class="row"><label>隔板厚</label><input id="slotDividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:12px;color:#6c728a">mm（Teilerstärke，預設 3）</span></div>
-          <div class="hint" style="color:#8ec0ff">範例：tech-rack custom 400×300 為 19×27 格，隔板 3mm。程式會計算：每格淨尺寸 = (籃具尺寸 - (格數-1)×隔板厚) / 格數，再算每格能放幾個工件（含間隔）。</div>
+          <div class="hint" style="color:#8ec0ff">自動模式：程式枚舉 1~30 格，找出總工件數最大的組合。手動模式：指定格數（如 tech-rack custom 400×300 為 19×27）。隔板厚度會從籃具尺寸扣除，工件置中於單格不與隔板干涉。</div>
         </div>
       </div>
       <div class="hint">間隔為工件之間最小距離。高度僅檢查是否放得下，不堆疊。</div>
@@ -229,10 +232,12 @@ const els = {
   allowVerticalRotate: document.getElementById('allowVerticalRotate'),
   wallGap: document.getElementById('wallGap'),
   slotMode: document.getElementById('slotMode'),
+  slotAuto: document.getElementById('slotAuto'),
   slotsL: document.getElementById('slotsL'),
   slotsW: document.getElementById('slotsW'),
   slotDividerThick: document.getElementById('slotDividerThick'),
   slotInputs: document.getElementById('slotInputs'),
+  slotManualInputs: document.getElementById('slotManualInputs'),
   dailyHours: document.getElementById('dailyHours'),
   cleanTime: document.getElementById('cleanTime'),
   workDays: document.getElementById('workDays'),
@@ -343,6 +348,12 @@ function toggleSlotMode(){
       els.slotDividerThick.value = '3';
     }
   }
+  computeAndRender();
+}
+
+function toggleSlotAuto(){
+  const isAuto = els.slotAuto.checked;
+  els.slotManualInputs.style.display = isAuto ? 'none' : 'block';
   computeAndRender();
 }
 els.basketType.addEventListener('change', syncRasterBox);
@@ -512,13 +523,115 @@ function calcSlotMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRot
   };
 }
 
-function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider, useSlotMode, slotsL, slotsW, slotDividerThick){
+function calcSlotModeAuto(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRotate, wallGap, dividerThick){
+  // 自動優化：枚舉 1~30 格，找出總工件數最大的 slotsL × slotsW 組合
+  const wall = wallGap ? gap : 0;
+  const effL = bL - wall*2;
+  const effW = bW - wall*2;
+  const thick = dividerThick || 3;
+
+  // 在單格內計算最多能放幾個工件
+  function partsPerSlot(pl, pw, slotL, slotW){
+    if(slotL < pl || slotW < pw) return {nx:0, ny:0, count:0};
+    let nx = Math.floor((slotL + gap) / (pl + gap));
+    let ny = Math.floor((slotW + gap) / (pw + gap));
+    while(nx>0 && (nx*pl + (nx-1)*gap) > slotL) nx--;
+    while(ny>0 && (ny*pw + (ny-1)*gap) > slotW) ny--;
+    return {nx, ny, count: nx*ny};
+  }
+
+  function evaluate(slotsL, slotsW, pl, pw, ph, desc){
+    if(ph > bH) return null;
+    const slotUsableL = (effL - (slotsL - 1) * thick) / slotsL;
+    const slotUsableW = (effW - (slotsW - 1) * thick) / slotsW;
+    if(slotUsableL <= 0 || slotUsableW <= 0) return null;
+    const fit = partsPerSlot(pl, pw, slotUsableL, slotUsableW);
+    if(fit.count === 0) return null;
+    const totalCount = fit.count * slotsL * slotsW;
+    return {totalCount, perSlot: fit.count, nx: fit.nx, ny: fit.ny, slotsL, slotsW, pl, pw, ph, slotUsableL, slotUsableW, orientation: desc};
+  }
+
+  let bestOverall = null;
+
+  // 搜尋範圍：1~30 格（實際上受限於隔板厚度與工件尺寸）
+  const maxSlots = 30;
+  for(let sL = 1; sL <= maxSlots; sL++){
+    for(let sW = 1; sW <= maxSlots; sW++){
+      // 原始方向
+      const c1 = evaluate(sL, sW, pL, pW, pH, '原始方向 (L×W)');
+      if(c1 && (!bestOverall || c1.totalCount > bestOverall.totalCount)) bestOverall = c1;
+      // 水平旋轉
+      if(allowRotate){
+        const c2 = evaluate(sL, sW, pW, pL, pH, '水平旋轉 90° (W×L)');
+        if(c2 && (!bestOverall || c2.totalCount > bestOverall.totalCount)) bestOverall = c2;
+      }
+      // 垂直旋轉
+      if(allowVerticalRotate){
+        const c3 = evaluate(sL, sW, pW, pH, pL, '垂直旋轉 (H→W, L→H)');
+        if(c3 && (!bestOverall || c3.totalCount > bestOverall.totalCount)) bestOverall = c3;
+        const c4 = evaluate(sL, sW, pH, pW, pL, '垂直旋轉 (H→W, L→H) + 水平');
+        if(c4 && (!bestOverall || c4.totalCount > bestOverall.totalCount)) bestOverall = c4;
+        const c5 = evaluate(sL, sW, pL, pH, pW, '垂直旋轉 (H→L, W→H)');
+        if(c5 && (!bestOverall || c5.totalCount > bestOverall.totalCount)) bestOverall = c5;
+        const c6 = evaluate(sL, sW, pH, pL, pW, '垂直旋轉 (H→L, W→H) + 水平');
+        if(c6 && (!bestOverall || c6.totalCount > bestOverall.totalCount)) bestOverall = c6;
+      }
+    }
+  }
+
+  if(!bestOverall){
+    return {count:0, isSlotMode:true, reason:'自動優化：無可行格數組合，請檢查工件尺寸、間隔或隔板厚度'};
+  }
+
+  // 計算整體佔用尺寸
+  const usedL = bestOverall.slotsL * bestOverall.slotUsableL + (bestOverall.slotsL - 1) * thick;
+  const usedW = bestOverall.slotsW * bestOverall.slotUsableW + (bestOverall.slotsW - 1) * thick;
+  const remainL = bL - usedL - wall*2;
+  const remainW = bW - usedW - wall*2;
+  const util = (bestOverall.totalCount * bestOverall.pl * bestOverall.pw) / (bL * bW) * 100;
+
+  return {
+    count: bestOverall.totalCount,
+    nx: bestOverall.nx * bestOverall.slotsL,
+    ny: bestOverall.ny * bestOverall.slotsW,
+    pl: bestOverall.pl,
+    pw: bestOverall.pw,
+    ph: bestOverall.ph,
+    usedL,
+    usedW,
+    remainL,
+    remainW,
+    util,
+    orientation: bestOverall.orientation + ' · 自動優化(' + bestOverall.slotsL + '×' + bestOverall.slotsW + '格)',
+    isSlotMode: true,
+    isRaster: false,
+    slotUsableL: bestOverall.slotUsableL,
+    slotUsableW: bestOverall.slotUsableW,
+    slotsL: bestOverall.slotsL,
+    slotsW: bestOverall.slotsW,
+    dividerThick: thick,
+    perSlotCount: bestOverall.perSlot,
+    perSlotNx: bestOverall.nx,
+    perSlotNy: bestOverall.ny,
+    wall,
+    effL,
+    effW,
+    autoOptimized: true
+  };
+}
+
+function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider, useSlotMode, slotAuto, slotsL, slotsW, slotDividerThick){
   if(pH > bH) return {count:0, reason:'工件高度 '+pH+' 超過籃具高度 '+bH+'，無法放入', isRaster:type!=='free'};
   if(pL<=0||pW<=0||pH<=0||bL<=0||bW<=0) return {count:0, reason:'尺寸異常', isRaster:type!=='free'};
   
   // 格數模式優先
-  if(useSlotMode && slotsL > 0 && slotsW > 0){
-    return calcSlotMode(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,slotsL,slotsW,slotDividerThick);
+  if(useSlotMode){
+    if(slotAuto){
+      return calcSlotModeAuto(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,slotDividerThick);
+    }
+    if(slotsL > 0 && slotsW > 0){
+      return calcSlotMode(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,slotsL,slotsW,slotDividerThick);
+    }
   }
 
   const wall = wallGap ? gap : 0;
@@ -950,11 +1063,12 @@ function computeAndRender(){
 
   // 格數模式參數
   const useSlotMode = els.slotMode.checked;
+  const slotAuto = els.slotAuto.checked;
   const slotsL = parseInt(els.slotsL.value)||0;
   const slotsW = parseInt(els.slotsW.value)||0;
   const slotDividerThick = parseFloat(els.slotDividerThick.value)||3;
 
-  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider, useSlotMode, slotsL, slotsW, slotDividerThick);
+  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider, useSlotMode, slotAuto, slotsL, slotsW, slotDividerThick);
   if(layout.count>0){
     els.resultNum.innerHTML = layout.count + ' <small>個</small>';
     els.orientationBadge.textContent = layout.orientation;
@@ -1045,7 +1159,7 @@ function updateCapacity(perBasket){
 }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.slotMode, els.slotsL, els.slotsW, els.slotDividerThick].forEach(el=>{
+  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.slotMode, els.slotAuto, els.slotsL, els.slotsW, els.slotDividerThick].forEach(el=>{
     el.addEventListener(ev, computeAndRender);
   });
 });
@@ -1057,6 +1171,7 @@ els.stackCount.addEventListener('input', updateOverallSize);
 els.stackCount.addEventListener('change', updateOverallSize);
 els.basketH.addEventListener('input', updateOverallSize);
 els.slotMode.addEventListener('change', toggleSlotMode);
+els.slotAuto.addEventListener('change', toggleSlotAuto);
 
 initThree();
 refreshBasketSelect();
