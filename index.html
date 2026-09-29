@@ -154,25 +154,14 @@ main{flex:1;display:flex;min-height:0}
       <div class="checkRow"><input type="checkbox" id="wallGap"><label for="wallGap" style="cursor:pointer">籃具邊框也保留間隔（四周留白）</label></div>
       <div class="divider"></div>
       <div class="card" style="margin-top:8px;padding:10px;background:#1a1f2e;border:1px dashed #3a4a6a;border-radius:8px">
-        <h4 style="font-size:12px;color:#8ec0ff;margin-bottom:8px">📐 Raster 網格規劃模式（依型錄固定網格）</h4>
-        <div class="checkRow"><input type="checkbox" id="gridMode" onchange="toggleGridMode()"><label for="gridMode" style="cursor:pointer">啟用網格規劃：隔板只能放在 Raster 倍數位置，單元格內用間隔填滿</label></div>
-        <div id="gridInputs" style="display:none;margin-top:8px">
-          <div class="row"><label>Raster</label><input id="gridRaster" type="number" min="1" step="1" value="9"><span style="font-size:12px;color:#6c728a">mm（9=variogrid/techtray, 15=tech-rack）</span></div>
-          <div class="row"><label>隔板厚</label><input id="gridDividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:12px;color:#6c728a">mm（Teilerstärke）</span></div>
-          <div class="row">
-            <label>縱向隔板</label>
-            <select id="gridDividersL" multiple style="flex:1;background:#0f1420;border:1px solid #2e344e;color:#e6e8ec;border-radius:6px;padding:4px;height:80px">
-            </select>
-            <span style="font-size:11px;color:#8b92a8">Ctrl+點選多選；列號 1~n</span>
-          </div>
-          <div class="row">
-            <label>橫向隔板</label>
-            <select id="gridDividersW" multiple style="flex:1;background:#0f1420;border:1px solid #2e344e;color:#e6e8ec;border-radius:6px;padding:4px;height:80px">
-            </select>
-            <span style="font-size:11px;color:#8b92a8">Ctrl+點選多選；行號 1~n</span>
-          </div>
-          <div class="checkRow"><input type="checkbox" id="gridAuto" checked onchange="computeAndRender()"><label for="gridAuto" style="cursor:pointer">自動優化：搜尋最佳隔板組合使總工件數最大</label></div>
-          <div class="hint" style="color:#8ec0ff">網格線固定在 Raster 倍數處。隔板佔用 3mm 厚度，單元格淨尺寸 = 格距 - 隔板厚。工件在單元格內按間隔排版，不跨越隔板線。</div>
+        <h4 style="font-size:12px;color:#8ec0ff;margin-bottom:8px">📐 固定格數模式（如 tech-rack custom 19×27）</h4>
+        <div class="checkRow"><input type="checkbox" id="fixedGridMode" onchange="toggleFixedGridMode()"><label for="fixedGridMode" style="cursor:pointer">啟用固定格數：指定長/寬向格數，隔板自動對齊 Raster，單元格內用間隔排版</label></div>
+        <div id="fixedGridInputs" style="display:none;margin-top:8px">
+          <div class="row"><label>Raster</label><input id="fixedGridRaster" type="number" min="1" step="1" value="9"><span style="font-size:12px;color:#6c728a">mm（9=variogrid/techtray, 15=tech-rack）</span></div>
+          <div class="row"><label>長向格數</label><input id="fixedGridSlotsL" type="number" min="1" max="50" step="1" value="19"><span style="font-size:12px;color:#6c728a">個</span></div>
+          <div class="row"><label>寬向格數</label><input id="fixedGridSlotsW" type="number" min="1" max="50" step="1" value="27"><span style="font-size:12px;color:#6c728a">個</span></div>
+          <div class="row"><label>隔板厚</label><input id="fixedGridDividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:12px;color:#6c728a">mm（Teilerstärke）</span></div>
+          <div class="hint" style="color:#8ec0ff">格數固定時，隔板自動放在 Raster 倍數位置（平均分配），單元格淨尺寸 = 格距 - 隔板厚。工件在單元格內按間隔排版，不跨越隔板。tech-rack custom 400×300 預設 19×27 格，Raster 9mm。</div>
         </div>
       </div>
       <div class="hint">間隔為工件之間最小距離。高度僅檢查是否放得下，不堆疊。</div>
@@ -240,13 +229,12 @@ const els = {
   allowRotate: document.getElementById('allowRotate'),
   allowVerticalRotate: document.getElementById('allowVerticalRotate'),
   wallGap: document.getElementById('wallGap'),
-  gridMode: document.getElementById('gridMode'),
-  gridAuto: document.getElementById('gridAuto'),
-  gridRaster: document.getElementById('gridRaster'),
-  gridDividerThick: document.getElementById('gridDividerThick'),
-  gridDividersL: document.getElementById('gridDividersL'),
-  gridDividersW: document.getElementById('gridDividersW'),
-  gridInputs: document.getElementById('gridInputs'),
+  fixedGridMode: document.getElementById('fixedGridMode'),
+  fixedGridRaster: document.getElementById('fixedGridRaster'),
+  fixedGridSlotsL: document.getElementById('fixedGridSlotsL'),
+  fixedGridSlotsW: document.getElementById('fixedGridSlotsW'),
+  fixedGridDividerThick: document.getElementById('fixedGridDividerThick'),
+  fixedGridInputs: document.getElementById('fixedGridInputs'),
   dailyHours: document.getElementById('dailyHours'),
   cleanTime: document.getElementById('cleanTime'),
   workDays: document.getElementById('workDays'),
@@ -353,30 +341,26 @@ function toggleGridMode(){
   computeAndRender();
 }
 
-function updateGridDividerOptions(){
-  const bL = parseInt(els.basketL.value)||0;
-  const bW = parseInt(els.basketW.value)||0;
-  const raster = parseInt(els.gridRaster.value)||9;
-  const maxL = Math.floor(bL / raster);
-  const maxW = Math.floor(bW / raster);
-  
-  // 縱向隔板選項（沿長向分隔寬向，位置在 1~maxL-1）
-  els.gridDividersL.innerHTML = '';
-  for(let i=1; i<maxL; i++){
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = `第 ${i} 條網格線 (${i*raster}mm)`;
-    els.gridDividersL.appendChild(opt);
+function toggleFixedGridMode(){
+  const enabled = els.fixedGridMode.checked;
+  els.fixedGridInputs.style.display = enabled ? 'block' : 'none';
+  if(enabled){
+    // tech-rack custom 400x300 預設 19x27 格
+    if(els.basketL.value==='400' && els.basketW.value==='300'){
+      els.fixedGridSlotsL.value = '19';
+      els.fixedGridSlotsW.value = '27';
+      els.fixedGridRaster.value = '9';
+      els.fixedGridDividerThick.value = '3';
+    }
+    // techtray 425x276 可設為 3x2 格等
+    else if(els.basketL.value==='425' && els.basketW.value==='276'){
+      els.fixedGridSlotsL.value = '3';
+      els.fixedGridSlotsW.value = '2';
+      els.fixedGridRaster.value = '9';
+      els.fixedGridDividerThick.value = '3';
+    }
   }
-  
-  // 橫向隔板選項（沿寬向分隔長向，位置在 1~maxW-1）
-  els.gridDividersW.innerHTML = '';
-  for(let i=1; i<maxW; i++){
-    const opt = document.createElement('option');
-    opt.value = i;
-    opt.textContent = `第 ${i} 條網格線 (${i*raster}mm)`;
-    els.gridDividersW.appendChild(opt);
-  }
+  computeAndRender();
 }
 els.basketType.addEventListener('change', syncRasterBox);
 
@@ -545,28 +529,43 @@ function calcSlotMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRot
   };
 }
 
-function calcGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRotate, wallGap, gridAuto, gridRaster, gridDividerThick, selectedDividersL, selectedDividersW){
-  // Raster 網格規劃模式：隔板固定在 Raster 倍數位置
+function calcFixedGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRotate, wallGap, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW){
+  // 固定格數模式：指定長/寬向格數，隔板自動對齊 Raster 倍數位置（平均分配）
   // 單元格內用間隔排版，工件不跨越隔板
   const wall = wallGap ? gap : 0;
   const effL = bL - wall*2;
   const effW = bW - wall*2;
-  const thick = gridDividerThick || 3;
-  const raster = gridRaster || 9;
+  const thick = fixedGridDividerThick || 3;
+  const raster = fixedGridRaster || 9;
 
-  // 計算網格線位置（從 0 到籃具尺寸，步距 raster）
-  const gridLinesL = [];
-  for(let pos = 0; pos <= bL; pos += raster) gridLinesL.push(pos);
-  const gridLinesW = [];
-  for(let pos = 0; pos <= bW; pos += raster) gridLinesW.push(pos);
+  // 計算理想格距（含隔板厚度）
+  const idealPitchL = effL / slotsL;
+  const idealPitchW = effW / slotsW;
 
-  // 確定隔板位置
-  // 手動模式：使用用戶選擇的網格線索引
-  // 自動模式：枚舉所有可能的隔板組合
-  function getDividerPositions(lines, selectedIndices){
-    // 選定的隔板位置（網格線索引），轉換為實際位置
-    // 隔板置中於網格線，佔用 thick 寬度
-    return selectedIndices.map(idx => lines[idx]);
+  // 將格距對齊到 Raster 倍數
+  const pitchL = Math.round(idealPitchL / raster) * raster;
+  const pitchW = Math.round(idealPitchW / raster) * raster;
+
+  // 如果對齊後太小，強制最小為 raster
+  const finalPitchL = Math.max(pitchL, raster);
+  const finalPitchW = Math.max(pitchW, raster);
+
+  // 實際單元格淨尺寸 = 格距 - 隔板厚
+  const cellSizeL = finalPitchL - thick;
+  const cellSizeW = finalPitchW - thick;
+
+  if(cellSizeL <= 0 || cellSizeW <= 0){
+    return {count:0, isFixedGridMode:true, reason:'格距過小導致單元格淨尺寸 ≤ 0，請減少格數或縮小隔板厚度'};
+  }
+
+  // 隔板位置（從邊框開始，每隔 finalPitch 放一根）
+  const dividersL = [];
+  for(let i=1; i<slotsL; i++){
+    dividersL.push(i * finalPitchL);
+  }
+  const dividersW = [];
+  for(let i=1; i<slotsW; i++){
+    dividersW.push(i * finalPitchW);
   }
 
   // 計算單元格邊界
@@ -576,16 +575,18 @@ function calcGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRot
     for(let i=0; i<boundaries.length-1; i++){
       const start = boundaries[i];
       const end = boundaries[i+1];
-      // 扣除隔板厚度：如果是中間隔板，左右各佔 thick/2
       let cellStart = start;
       let cellEnd = end;
-      if(i > 0) cellStart += thick/2; // 左側隔板佔用
-      if(i < boundaries.length-2) cellEnd -= thick/2; // 右側隔板佔用
+      if(i > 0) cellStart += thick/2;
+      if(i < boundaries.length-2) cellEnd -= thick/2;
       const size = cellEnd - cellStart;
       if(size > 0) cells.push({start: cellStart, end: cellEnd, size, center: (cellStart+cellEnd)/2});
     }
     return cells;
   }
+
+  const cellsL = computeCells(wall, bL - wall, dividersL);
+  const cellsW = computeCells(wall, bW - wall, dividersW);
 
   // 在單元格內計算工件數
   function partsInCell(pl, pw, cellL, cellW){
@@ -597,17 +598,11 @@ function calcGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRot
     return {nx, ny, count: nx*ny};
   }
 
-  // 評估特定隔板配置
-  function evaluateConfig(divL, divW, pl, pw, ph, desc){
+  // 評估特定方向
+  function evaluateDir(pl, pw, ph, desc){
     if(ph > bH) return null;
-    const cellsL = computeCells(wall, bL - wall, divL);
-    const cellsW = computeCells(wall, bW - wall, divW);
-    if(cellsL.length === 0 || cellsW.length === 0) return null;
-
     let totalCount = 0;
     let totalNx = 0, totalNy = 0;
-    const perCellDetails = [];
-
     for(const cellL of cellsL){
       for(const cellW of cellsW){
         const fit = partsInCell(pl, pw, cellL.size, cellW.size);
@@ -615,139 +610,88 @@ function calcGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRot
           totalCount += fit.count;
           totalNx += fit.nx;
           totalNy += fit.ny;
-          perCellDetails.push({cellL: cellL.size, cellW: cellW.size, nx: fit.nx, ny: fit.ny, count: fit.count});
         }
       }
     }
     if(totalCount === 0) return null;
-    return {totalCount, perCellDetails, nx: totalNx, ny: totalNy, divL, divW, pl, pw, ph, cellsL, cellsW, orientation: desc};
+    return {totalCount, nx: totalNx, ny: totalNy, pl, pw, ph, cellsL, cellsW, dividersL, dividersW, orientation: desc, pitchL: finalPitchL, pitchW: finalPitchW, cellSizeL, cellSizeW};
   }
 
-  // 產生候選隔板配置
-  function generateConfigs(auto, selDivL, selDivW){
-    const configs = [];
-    const maxIdxL = gridLinesL.length - 1;
-    const maxIdxW = gridLinesW.length - 1;
-
-    if(auto){
-      // 自動模式：枚舉所有可能的隔板組合（限制合理範圍避免爆炸）
-      // 長向最多 5 條隔板，寬向最多 5 條
-      const maxDividers = 5;
-      
-      // 產生所有可能的隔板索引組合
-      function getCombinations(maxIdx, maxCount){
-        const result = [[]]; // 含無隔板
-        for(let count = 1; count <= maxCount; count++){
-          function combine(start, current){
-            if(current.length === count){
-              result.push([...current]);
-              return;
-            }
-            for(let i = start; i < maxIdx; i++){
-              combine(i+1, [...current, i]);
-            }
-          }
-          combine(1, []); // 索引 1 開始（0 是邊框）
-        }
-        return result;
-      }
-
-      const combosL = getCombinations(maxIdxL, maxDividers);
-      const combosW = getCombinations(maxIdxW, maxDividers);
-
-      for(const comboL of combosL){
-        for(const comboW of combosW){
-          const divL = comboL.map(idx => gridLinesL[idx]);
-          const divW = comboW.map(idx => gridLinesW[idx]);
-          configs.push({divL, divW, desc: `自動(L:${comboL.join(',')}|W:${comboW.join(',')})`});
-        }
-      }
-    }else{
-      // 手動模式：使用用戶選擇
-      const divL = selDivL.map(idx => gridLinesL[idx]);
-      const divW = selDivW.map(idx => gridLinesW[idx]);
-      configs.push({divL, divW, desc: '手動指定'});
-    }
-    return configs;
+  // 嘗試所有旋轉方向
+  let best = null;
+  const c1 = evaluateDir(pL, pW, pH, '原始方向 (L×W)');
+  if(c1) best = c1;
+  if(allowRotate){
+    const c2 = evaluateDir(pW, pL, pH, '水平旋轉 90° (W×L)');
+    if(c2 && (!best || c2.totalCount > best.totalCount)) best = c2;
+  }
+  if(allowVerticalRotate){
+    const c3 = evaluateDir(pW, pH, pL, '垂直旋轉 (H→W, L→H)');
+    if(c3 && (!best || c3.totalCount > best.totalCount)) best = c3;
+    const c4 = evaluateDir(pH, pW, pL, '垂直旋轉 (H→W, L→H) + 水平');
+    if(c4 && (!best || c4.totalCount > best.totalCount)) best = c4;
+    const c5 = evaluateDir(pL, pH, pW, '垂直旋轉 (H→L, W→H)');
+    if(c5 && (!best || c5.totalCount > best.totalCount)) best = c5;
+    const c6 = evaluateDir(pH, pL, pW, '垂直旋轉 (H→L, W→H) + 水平');
+    if(c6 && (!best || c6.totalCount > best.totalCount)) best = c6;
   }
 
-  const configs = generateConfigs(gridAuto, selectedDividersL, selectedDividersW);
-  let bestOverall = null;
-
-  for(const config of configs){
-    // 原始方向
-    const c1 = evaluateConfig(config.divL, config.divW, pL, pW, pH, config.desc + ' 原始方向 (L×W)');
-    if(c1 && (!bestOverall || c1.totalCount > bestOverall.totalCount)) bestOverall = c1;
-    // 水平旋轉
-    if(allowRotate){
-      const c2 = evaluateConfig(config.divL, config.divW, pW, pL, pH, config.desc + ' 水平旋轉 90° (W×L)');
-      if(c2 && (!bestOverall || c2.totalCount > bestOverall.totalCount)) bestOverall = c2;
-    }
-    // 垂直旋轉
-    if(allowVerticalRotate){
-      const c3 = evaluateConfig(config.divL, config.divW, pW, pH, pL, config.desc + ' 垂直旋轉 (H→W, L→H)');
-      if(c3 && (!bestOverall || c3.totalCount > bestOverall.totalCount)) bestOverall = c3;
-      const c4 = evaluateConfig(config.divL, config.divW, pH, pW, pL, config.desc + ' 垂直旋轉 (H→W, L→H) + 水平');
-      if(c4 && (!bestOverall || c4.totalCount > bestOverall.totalCount)) bestOverall = c4;
-      const c5 = evaluateConfig(config.divL, config.divW, pL, pH, pW, config.desc + ' 垂直旋轉 (H→L, W→H)');
-      if(c5 && (!bestOverall || c5.totalCount > bestOverall.totalCount)) bestOverall = c5;
-      const c6 = evaluateConfig(config.divL, config.divW, pH, pL, pW, config.desc + ' 垂直旋轉 (H→L, W→H) + 水平');
-      if(c6 && (!bestOverall || c6.totalCount > bestOverall.totalCount)) bestOverall = c6;
-    }
-  }
-
-  if(!bestOverall){
-    return {count:0, isGridMode:true, reason:'網格模式：無可行隔板配置，請檢查工件尺寸、間隔或隔板位置'};
+  if(!best){
+    return {count:0, isFixedGridMode:true, reason:'固定格數模式：工件無法放入單元格，請嘗試旋轉或減小工件/間隔/格數'};
   }
 
   // 計算整體佔用尺寸
-  const usedL = bestOverall.cellsL[bestOverall.cellsL.length-1].end - bestOverall.cellsL[0].start;
-  const usedW = bestOverall.cellsW[bestOverall.cellsW.length-1].end - bestOverall.cellsW[0].start;
+  const usedL = cellsL[cellsL.length-1].end - cellsL[0].start;
+  const usedW = cellsW[cellsW.length-1].end - cellsW[0].start;
   const remainL = bL - usedL - wall*2;
   const remainW = bW - usedW - wall*2;
-  const util = (bestOverall.totalCount * bestOverall.pl * bestOverall.pw) / (bL * bW) * 100;
+  const util = (best.totalCount * best.pl * best.pw) / (bL * bW) * 100;
 
-  // 平均單元格尺寸（用於顯示）
-  const avgCellL = bestOverall.cellsL.reduce((sum,c)=>sum+c.size,0) / bestOverall.cellsL.length;
-  const avgCellW = bestOverall.cellsW.reduce((sum,c)=>sum+c.size,0) / bestOverall.cellsW.length;
+  const avgCellL = cellsL.reduce((sum,c)=>sum+c.size,0) / cellsL.length;
+  const avgCellW = cellsW.reduce((sum,c)=>sum+c.size,0) / cellsW.length;
 
   return {
-    count: bestOverall.totalCount,
-    nx: bestOverall.nx,
-    ny: bestOverall.ny,
-    pl: bestOverall.pl,
-    pw: bestOverall.pw,
-    ph: bestOverall.ph,
+    count: best.totalCount,
+    nx: best.nx,
+    ny: best.ny,
+    pl: best.pl,
+    pw: best.pw,
+    ph: best.ph,
     usedL,
     usedW,
     remainL,
     remainW,
     util,
-    orientation: bestOverall.orientation,
-    isGridMode: true,
+    orientation: best.orientation,
+    isFixedGridMode: true,
     isRaster: false,
     gridRaster: raster,
     gridDividerThick: thick,
-    dividersL: bestOverall.divL,
-    dividersW: bestOverall.divW,
-    cellsL: bestOverall.cellsL,
-    cellsW: bestOverall.cellsW,
+    dividersL: best.dividersL,
+    dividersW: best.dividersW,
+    cellsL: best.cellsL,
+    cellsW: best.cellsW,
     avgCellL,
     avgCellW,
+    pitchL: best.pitchL,
+    pitchW: best.pitchW,
+    cellSizeL: best.cellSizeL,
+    cellSizeW: best.cellSizeW,
+    slotsL,
+    slotsW,
     wall,
     effL,
-    effW,
-    autoOptimized: gridAuto
+    effW
   };
 }
 
-function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider, useGridMode, gridAuto, gridRaster, gridDividerThick, selectedDividersL, selectedDividersW){
+function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider, useFixedGridMode, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW){
   if(pH > bH) return {count:0, reason:'工件高度 '+pH+' 超過籃具高度 '+bH+'，無法放入', isRaster:type!=='free'};
   if(pL<=0||pW<=0||pH<=0||bL<=0||bW<=0) return {count:0, reason:'尺寸異常', isRaster:type!=='free'};
   
-  // 網格規劃模式優先
-  if(useGridMode){
-    return calcGridMode(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap, gridAuto, gridRaster, gridDividerThick, selectedDividersL, selectedDividersW);
+  // 固定格數模式優先
+  if(useFixedGridMode && slotsL > 0 && slotsW > 0){
+    return calcFixedGridMode(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW);
   }
 
   const wall = wallGap ? gap : 0;
@@ -1001,6 +945,7 @@ function buildScene(bL,bW,bH, layout, gap){
           const geo=new THREE.BoxGeometry(thick, dividerH, totalW);
           const matD=new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
           const mesh=new THREE.Mesh(geo, matD);
+          mesh.frustumCulled = false; // 修正：防止視角旋轉時被剔除
           mesh.position.set(gapCenter, yBaseDiv + dividerH/2+2, 0);
           dividerGroup.add(mesh);
         }
@@ -1009,13 +954,14 @@ function buildScene(bL,bW,bH, layout, gap){
           const geo=new THREE.BoxGeometry(totalL, dividerH, thick);
           const matD=new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
           const mesh=new THREE.Mesh(geo, matD);
+          mesh.frustumCulled = false; // 修正：防止視角旋轉時被剔除
           mesh.position.set(0, yBaseDiv + dividerH/2+2, gapCenter);
           dividerGroup.add(mesh);
         }
       }
     }
-  } else if(layout.isGridMode){
-    // 網格模式：繪製 Raster 虛線網格 + 選定位置的實體隔板牆
+  } else if(layout.isFixedGridMode){
+    // 固定格數模式：繪製 Raster 虛線網格 + 選定位置的實體隔板牆
     const halfL = bL/2, halfW = bW/2;
     const dividerH = Math.min(bH*0.9, Math.max(28, bH-4));
     const thick = layout.gridDividerThick || 3;
@@ -1052,6 +998,7 @@ function buildScene(bL,bW,bH, layout, gap){
     }
 
     // 繪製選定位置的實體隔板牆（金黃色，不透明度較高）
+    // 修正：設定 frustumCulled = false 防止旋轉視角時消失
     const matD = new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.65, roughness:0.6});
     for(let s=0;s<stackCount;s++){
       const yBaseDiv = s*bH;
@@ -1060,6 +1007,7 @@ function buildScene(bL,bW,bH, layout, gap){
         const xPos = -halfL + divPos;
         const geo = new THREE.BoxGeometry(thick, dividerH, totalUsedW);
         const mesh = new THREE.Mesh(geo, matD);
+        mesh.frustumCulled = false; // 修正：防止視角旋轉時被剔除
         mesh.position.set(xPos, yBaseDiv + dividerH/2+2, 0);
         dividerGroup.add(mesh);
       }
@@ -1068,6 +1016,7 @@ function buildScene(bL,bW,bH, layout, gap){
         const zPos = -halfW + divPos;
         const geo = new THREE.BoxGeometry(totalUsedL, dividerH, thick);
         const mesh = new THREE.Mesh(geo, matD);
+        mesh.frustumCulled = false; // 修正：防止視角旋轉時被剔除
         mesh.position.set(0, yBaseDiv + dividerH/2+2, zPos);
         dividerGroup.add(mesh);
       }
@@ -1110,8 +1059,8 @@ function buildScene(bL,bW,bH, layout, gap){
       pitchL=layout.pitchL; pitchW=layout.pitchW; lastL=layout.lastL; lastW=layout.lastW;
       offsetL = (bL - totalL)/2;
       offsetW = (bW - totalW)/2;
-    } else if(isGridMode){
-      // 網格模式：使用 cellsL/cellsW 計算位置
+    } else if(isFixedGridMode){
+      // 固定格數模式：使用 cellsL/cellsW 計算位置
       const cellsL = layout.cellsL;
       const cellsW = layout.cellsW;
       totalL = cellsL[cellsL.length-1].end - cellsL[0].start;
@@ -1151,9 +1100,8 @@ function buildScene(bL,bW,bH, layout, gap){
             const cellStartW = -bW/2 + offsetW + iz*pitchW;
             x = cellStartL + pl/2 + (lastL - pl)/2;
             z = cellStartW + pw/2 + (lastW - pw)/2;
-          } else if(isGridMode){
-            // 網格模式：根據 cells 陣列定位
-            // 找到第 ix 個工件所在的 cellL 索引
+          } else if(isFixedGridMode){
+            // 固定格數模式：根據 cells 陣列定位
             let cellLIdx = 0, countL = 0;
             for(let ci=0; ci<layout.cellsL.length; ci++){
               const cellFit = Math.floor((layout.cellsL[ci].size + gap) / (pl + gap));
@@ -1170,7 +1118,6 @@ function buildScene(bL,bW,bH, layout, gap){
             }
             const cellL = layout.cellsL[cellLIdx];
             const cellW = layout.cellsW[cellWIdx];
-            // 在 cell 內的相對位置
             const relIx = ix - countL;
             const relIz = iz - countW;
             const startX = -bL/2 + offsetL + cellL.start + relIx*(pl+gap) + pl/2;
@@ -1228,28 +1175,26 @@ function computeAndRender(){
   const stackCount=Math.min(100, Math.max(1, parseInt(els.stackCount.value)||1));
   const overallH=bH*stackCount;
 
-  // 網格規劃模式參數
-  const useGridMode = els.gridMode.checked;
-  const gridAuto = els.gridAuto.checked;
-  const gridRaster = parseInt(els.gridRaster.value)||9;
-  const gridDividerThick = parseFloat(els.gridDividerThick.value)||3;
-  // 取得選中的隔板位置
-  const selectedDividersL = Array.from(els.gridDividersL.selectedOptions).map(o => parseInt(o.value));
-  const selectedDividersW = Array.from(els.gridDividersW.selectedOptions).map(o => parseInt(o.value));
+  // 固定格數模式參數
+  const useFixedGridMode = els.fixedGridMode.checked;
+  const fixedGridRaster = parseInt(els.fixedGridRaster.value)||9;
+  const fixedGridDividerThick = parseFloat(els.fixedGridDividerThick.value)||3;
+  const slotsL = parseInt(els.fixedGridSlotsL.value)||0;
+  const slotsW = parseInt(els.fixedGridSlotsW.value)||0;
 
-  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider, useGridMode, gridAuto, gridRaster, gridDividerThick, selectedDividersL, selectedDividersW);
+  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider, useFixedGridMode, fixedGridRaster, fixedGridDividerThick, slotsL, slotsW);
   if(layout.count>0){
     els.resultNum.innerHTML = layout.count + ' <small>個</small>';
     els.orientationBadge.textContent = layout.orientation;
     els.orientationBadge.style.background='#1a2744'; els.orientationBadge.style.color='#8ec0ff';
     if(layout.isRaster){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent=layout.raster+'mm Raster · 隔板'+layout.divider+'mm'; }
-    else if(layout.isGridMode){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='網格模式 '+layout.gridRaster+'mm·隔板'+layout.gridDividerThick+'mm'; els.rasterBadge.style.background='#0f1f14'; els.rasterBadge.style.borderColor='#2b5c3a'; els.rasterBadge.style.color='#8affb0'; }
+    else if(layout.isFixedGridMode){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='固定格數 '+layout.gridRaster+'mm·隔板'+layout.gridDividerThick+'mm'; els.rasterBadge.style.background='#0f1f14'; els.rasterBadge.style.borderColor='#2b5c3a'; els.rasterBadge.style.color='#8affb0'; }
     else if(layout.isSlotMode){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='格數模式 · 隔板'+layout.dividerThick+'mm'; els.rasterBadge.style.background='#0f1f14'; els.rasterBadge.style.borderColor='#2b5c3a'; els.rasterBadge.style.color='#8affb0'; }
     else { els.rasterBadge.style.display='none'; }
     const totalCount=layout.count*stackCount;
     let detail = '★ 最佳排列 每層 '+layout.nx+' × '+layout.ny+' = '+layout.count+' 個，'+stackCount+'層共 '+totalCount+' 個<br>（長向 '+layout.nx+' × 寬向 '+layout.ny+'）<br>單個工件 '+layout.pl+'×'+layout.pw+'×'+layout.ph+' mm · 間隔 '+gap+'mm';
     if(layout.isRaster) detail += ' · 取整至 '+layout.raster+'mm 網格（隔板 '+layout.divider+'mm）<br>每件佔據 '+layout.pitchL+'×'+layout.pitchW+' mm 網格（含間隔），最後件 '+layout.lastL+'×'+layout.lastW+' mm';
-    else if(layout.isGridMode) detail += ' · 網格模式：'+layout.gridRaster+'mm Raster，'+layout.cellsL.length+'×'+layout.cellsW.length+' 格，平均單元格 '+layout.avgCellL.toFixed(1)+'×'+layout.avgCellW.toFixed(1)+' mm（隔板 '+layout.gridDividerThick+'mm）<br>隔板位置 長向:['+layout.dividersL.map(v=>v+'mm').join(', ')+'] 寬向:['+layout.dividersW.map(v=>v+'mm').join(', ')+']';
+    else if(layout.isFixedGridMode) detail += ' · 固定格數：'+layout.slotsL+'×'+layout.slotsW+' 格，'+layout.gridRaster+'mm Raster，平均單元格 '+layout.avgCellL.toFixed(1)+'×'+layout.avgCellW.toFixed(1)+' mm（隔板 '+layout.gridDividerThick+'mm）<br>隔板位置 長向:['+layout.dividersL.map(v=>v+'mm').join(', ')+'] 寬向:['+layout.dividersW.map(v=>v+'mm').join(', ')+']';
     else if(layout.isSlotMode) detail += ' · 格數模式：'+layout.slotsL+'×'+layout.slotsW+' 格，單格淨尺寸 '+layout.slotUsableL.toFixed(1)+'×'+layout.slotUsableW.toFixed(1)+' mm（隔板 '+layout.dividerThick+'mm）<br>每格可放 '+layout.perSlotCount+' 個（'+layout.perSlotNx+'×'+layout.perSlotNy+'）';
     els.resultDetail.innerHTML=detail;
     const floorUtil = layout.util.toFixed(1);
@@ -1265,7 +1210,7 @@ function computeAndRender(){
       kv('整體高度', bH+'×'+stackCount+' = '+overallH+' mm'),
     ].join('');
     if(layout.isRaster) kvHtml += kv('網格利用率(含隔板)', layout.utilGrid.toFixed(1)+'%');
-    if(layout.isGridMode) kvHtml += kv('平均單元格', layout.avgCellL.toFixed(1)+' × '+layout.avgCellW.toFixed(1)+' mm') + kv('隔板厚度', layout.gridDividerThick+' mm') + kv('格數配置', layout.cellsL.length+'×'+layout.cellsW.length+' 格') + kv('隔板位置', '長['+layout.dividersL.map(v=>v+'mm').join(',')+'] 寬['+layout.dividersW.map(v=>v+'mm').join(',')+']');
+    if(layout.isFixedGridMode) kvHtml += kv('平均單元格', layout.avgCellL.toFixed(1)+' × '+layout.avgCellW.toFixed(1)+' mm') + kv('隔板厚度', layout.gridDividerThick+' mm') + kv('格數配置', layout.slotsL+'×'+layout.slotsW+' 格') + kv('隔板位置', '長['+layout.dividersL.map(v=>v+'mm').join(',')+'] 寬['+layout.dividersW.map(v=>v+'mm').join(',')+']');
     if(layout.isSlotMode) kvHtml += kv('單格淨尺寸', layout.slotUsableL.toFixed(1)+' × '+layout.slotUsableW.toFixed(1)+' mm') + kv('隔板厚度', layout.dividerThick+' mm') + kv('格數配置', layout.slotsL+'×'+layout.slotsW+' 格') + kv('每格工件數', layout.perSlotCount+' 個（'+layout.perSlotNx+'×'+layout.perSlotNy+'）');
     els.resultKV.innerHTML=kvHtml;
     if(layout.isRaster && layout.freeBest){
@@ -1287,10 +1232,10 @@ function computeAndRender(){
     els.orientationBadge.style.background='#3a1a1a'; els.orientationBadge.style.color='#ffb0b0';
     els.rasterBadge.style.display = layout.isRaster ? 'inline-block' : 'none';
     if(layout.isRaster) els.rasterBadge.textContent= raster+'mm Raster';
-    else if(layout.isGridMode) { els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='網格模式'; els.rasterBadge.style.background='#3a1a1a'; els.rasterBadge.style.borderColor='#5c2b2b'; els.rasterBadge.style.color='#ffb0b0'; }
+    else if(layout.isFixedGridMode) { els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='固定格數'; els.rasterBadge.style.background='#3a1a1a'; els.rasterBadge.style.borderColor='#5c2b2b'; els.rasterBadge.style.color='#ffb0b0'; }
     else if(layout.isSlotMode) { els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='格數模式'; els.rasterBadge.style.background='#3a1a1a'; els.rasterBadge.style.borderColor='#5c2b2b'; els.rasterBadge.style.color='#ffb0b0'; }
     els.resultDetail.textContent = layout.reason || '無法擺放';
-    els.resultKV.innerHTML = kv('籃具', bL+'×'+bW+'×'+bH+' mm'+(layout.isRaster?' · '+raster+'mm Raster': layout.isGridMode?' · 網格模式': layout.isSlotMode?' · 格數模式':' · 自由')) + kv('工件', pL+'×'+pW+'×'+pH+' mm') + kv('間隔', gap+'mm');
+    els.resultKV.innerHTML = kv('籃具', bL+'×'+bW+'×'+bH+' mm'+(layout.isRaster?' · '+raster+'mm Raster': layout.isFixedGridMode?' · 固定格數': layout.isSlotMode?' · 格數模式':' · 自由')) + kv('工件', pL+'×'+pW+'×'+pH+' mm') + kv('間隔', gap+'mm');
     if(layout.freeBest && layout.freeBest.count>0){
       els.compareBox.style.display='block';
       els.compareBox.innerHTML = '<b>自由擺放可放 '+layout.freeBest.count+' 個</b>，但 Raster 限制下無法放入。試著減小工件或間隔，或切換為自由籃具。';
@@ -1332,7 +1277,7 @@ function updateCapacity(perBasket){
 }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.gridMode, els.gridAuto, els.gridRaster, els.gridDividerThick].forEach(el=>{
+  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.fixedGridMode, els.fixedGridRaster, els.fixedGridSlotsL, els.fixedGridSlotsW, els.fixedGridDividerThick].forEach(el=>{
     if(el) el.addEventListener(ev, computeAndRender);
   });
 });
@@ -1343,9 +1288,7 @@ els.basketW.addEventListener('input', updateHints);
 els.stackCount.addEventListener('input', updateOverallSize);
 els.stackCount.addEventListener('change', updateOverallSize);
 els.basketH.addEventListener('input', updateOverallSize);
-els.gridMode.addEventListener('change', toggleGridMode);
-els.gridAuto.addEventListener('change', computeAndRender);
-els.gridRaster.addEventListener('change', updateGridDividerOptions);
+els.fixedGridMode.addEventListener('change', toggleFixedGridMode);
 
 initThree();
 refreshBasketSelect();
