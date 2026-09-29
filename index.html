@@ -968,19 +968,17 @@ function buildScene(bL,bW,bH, layout, gap){
         }
       }
       
-      // 新增：標示縱向柱號 (L方向)
+      // 新增：標示縱向柱號 (L方向) - 每層皆顯示
       // 使用 pitch 計算位置
       const pitchL = layout.pitchL;
       const lastL = layout.lastL;
       const colLabelMat = new THREE.MeshBasicMaterial({color:0xf0f0f0, transparent:true, opacity:0.9});
       for(let k=1; k<layout.nx; k++){
         // 計算第 k 列 divider 的位置
-        // 位置 = -halfL + offsetL + (k-1)*pitchL + lastL/2
-        // 簡化：使用 pitch 間隔從 -halfL 開始
         const colPosition = -halfL + (k-1)*pitchL + lastL/2;
-        // 標籤放在籃具前方
+        // 標籤放在籃具前方，每層稍微抬高一點點以避免重疊
         const labelPosX = colPosition;
-        const labelPosZ = -halfW - 25; // 籃具前方
+        const labelPosZ = -halfW - 25 - s * 3; // 階層間距 -3mm
         const labelGeo = new THREE.PlaneGeometry(25, 10);
         const labelMesh = new THREE.Mesh(labelGeo, colLabelMat);
         labelMesh.position.set(labelPosX, y + 8, labelPosZ);
