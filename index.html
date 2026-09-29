@@ -152,6 +152,18 @@ main{flex:1;display:flex;min-height:0}
       <div class="checkRow"><input type="checkbox" id="allowRotate" checked><label for="allowRotate" style="cursor:pointer">允許工件水平旋轉 90° 自動擇優</label></div>
       <div class="checkRow"><input type="checkbox" id="allowVerticalRotate" checked><label for="allowVerticalRotate" style="cursor:pointer">允許工件垂直旋轉 90° 自動擇優（高度可轉為長/寬）</label></div>
       <div class="checkRow"><input type="checkbox" id="wallGap"><label for="wallGap" style="cursor:pointer">籃具邊框也保留間隔（四周留白）</label></div>
+      <div class="divider"></div>
+      <div class="card" style="margin-top:8px;padding:10px;background:#1a1f2e;border:1px dashed #3a4a6a;border-radius:8px">
+        <h4 style="font-size:12px;color:#8ec0ff;margin-bottom:8px">📐 插槽規劃模式（依實際 Teiler 數量）</h4>
+        <div class="checkRow"><input type="checkbox" id="slotMode" onchange="toggleSlotMode()"><label for="slotMode" style="cursor:pointer">啟用插槽規劃：指定縱/橫向格數，自動計算實際可用空間</label></div>
+        <div id="slotInputs" style="display:none;margin-top:8px">
+          <div class="row"><label>縱向格數</label><input id="slotsL" type="number" min="1" max="20" step="1" value="3"><span style="font-size:12px;color:#6c728a">個（長向分幾格）</span></div>
+          <div class="row"><label>橫向格數</label><input id="slotsW" type="number" min="1" max="20" step="1" value="2"><span style="font-size:12px;color:#6c728a">個（寬向分幾格）</span></div>
+          <div class="row"><label>Teiler 長</label><input id="teilerLenL" type="number" min="0" step="1" value="376"><span style="font-size:12px;color:#6c728a">mm（縱向隔板長度，型錄 272/376）</span></div>
+          <div class="row"><label>Teiler 寬</label><input id="teilerLenW" type="number" min="0" step="1" value="272"><span style="font-size:12px;color:#6c728a">mm（橫向隔板長度，型錄 272/376）</span></div>
+          <div class="hint" style="color:#8ec0ff">techtray 425×276：縱向通常用 376mm Teiler，橫向用 272mm。啟用後將忽略 Raster 取整，改用實際隔板佔用空間計算每格淨尺寸。</div>
+        </div>
+      </div>
       <div class="hint">間隔為工件之間最小距離。高度僅檢查是否放得下，不堆疊。</div>
     </div>
 
@@ -217,6 +229,12 @@ const els = {
   allowRotate: document.getElementById('allowRotate'),
   allowVerticalRotate: document.getElementById('allowVerticalRotate'),
   wallGap: document.getElementById('wallGap'),
+  slotMode: document.getElementById('slotMode'),
+  slotsL: document.getElementById('slotsL'),
+  slotsW: document.getElementById('slotsW'),
+  teilerLenL: document.getElementById('teilerLenL'),
+  teilerLenW: document.getElementById('teilerLenW'),
+  slotInputs: document.getElementById('slotInputs'),
   dailyHours: document.getElementById('dailyHours'),
   cleanTime: document.getElementById('cleanTime'),
   workDays: document.getElementById('workDays'),
@@ -309,6 +327,21 @@ function updateOverallSize(){
   const overallH=H*n;
   if(els.overallSize) els.overallSize.textContent = `整體尺寸: ${L}×${W}×${overallH} mm（${n} 層，單層 ${H}mm）` + (n===100 ? '（已達上限）' : '');
 }
+
+function toggleSlotMode(){
+  const enabled = els.slotMode.checked;
+  els.slotInputs.style.display = enabled ? 'block' : 'none';
+  if(enabled){
+    // techtray 425x276 預設值
+    if(els.basketL.value==='425' && els.basketW.value==='276'){
+      els.slotsL.value = '3';
+      els.slotsW.value = '2';
+      els.teilerLenL.value = '376';
+      els.teilerLenW.value = '272';
+    }
+  }
+  computeAndRender();
+}
 els.basketType.addEventListener('change', syncRasterBox);
 
 function refreshBasketSelect(){
@@ -383,9 +416,127 @@ function calcFree(bL,bW,pL,pW,gap, effL, effW){
   return countFor;
 }
 
-function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider){
+function calcSlotMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRotate, wallGap, slotsL, slotsW, teilerLenL, teilerLenW, dividerThick){
+  // 槽模式：根據指定的縱/橫向格數與 Teiler 長度，計算每格淨尺寸
+  // Teiler 厚度預設 3mm（FRIES Teilerstärke）
+  const wall = wallGap ? gap : 0;
+  const effL = bL - wall*2;
+  const effW = bW - wall*2;
+  const thick = dividerThick || 3;
+
+  // 縱向：slotsL 個格子，需要 (slotsL-1) 根縱向 Teiler
+  // Teiler 長度 teilerLenL 會佔用寬向空間
+  // 橫向：slotsW 個格子，需要 (slotsW-1) 根橫向 Teiler
+  // Teiler 長度 teilerLenW 會佔用長向空間
+
+  // 計算每格淨尺寸
+  // 縱向總佔用 = slotsL * slotPitchL - gap (最後一格無尾隨 gap)
+  // 但這裡我們已知格數，反推每格可用尺寸
+  // 實際上：總長 = slotsL * partL + (slotsL-1) * gap + (slotsL-1) * thick <= effL
+  // 但 Teiler 是插在縱向的，長度 teilerLenL 沿寬向延伸
+
+  // 簡化：以「每格淨可用尺寸」= (有效尺寸 - 隔板佔用 - 間隔) / 格數
+  // 縱向（長向）：有 slotsL 格，中間有 (slotsL-1) 根橫向 Teiler（長度 teilerLenW，厚 thick）
+  const dividerCountL = slotsL - 1;
+  const dividerCountW = slotsW - 1;
+
+  // 橫向 Teiler（沿長向放置，長度 teilerLenW）佔用長向空間
+  // 縱向 Teiler（沿寬向放置，長度 teilerLenL）佔用寬向空間
+  // 但 Teiler 長度若小於籃具尺寸，兩端會有空隙
+  // 實際佔用：每根 Teiler 佔 thick 寬度，長度方向上由 teilerLen 決定
+
+  // 計算每格淨長寬（扣除隔板與間隔後的可用空間）
+  const totalDividerThickL = dividerCountW * thick; // 橫向 Teiler 佔用的長向總厚度
+  const totalDividerThickW = dividerCountL * thick; // 縱向 Teiler 佔用的寬向總厚度
+  const totalGapL = (slotsL - 1) * gap;
+  const totalGapW = (slotsW - 1) * gap;
+
+  const slotUsableL = (effL - totalDividerThickL - totalGapL) / slotsL;
+  const slotUsableW = (effW - totalDividerThickW - totalGapW) / slotsW;
+
+  if(slotUsableL <= 0 || slotUsableW <= 0){
+    return {count:0, isSlotMode:true, reason:`插槽配置導致淨尺寸 ≤ 0（格長 ${slotUsableL.toFixed(1)} × 格寬 ${slotUsableW.toFixed(1)}），請減少格數或縮小隔板/間隔`};
+  }
+
+  // 現在檢查工件是否能放入單個格子
+  // 每格獨立，工件只能放在一格內，不能跨格
+  // 所以比較工件尺寸與單格淨尺寸
+  function checkFit(pl, pw, ph, desc){
+    if(ph > bH) return null;
+    if(pl <= slotUsableL && pw <= slotUsableW){
+      return {count: slotsL * slotsW, nx: slotsL, ny: slotsW, pl, pw, ph, slotUsableL, slotUsableW, orientation: desc};
+    }
+    return null;
+  }
+
+  const candidates = [];
+  // 原始方向
+  candidates.push(checkFit(pL, pW, pH, '原始方向 (L×W)'));
+  if(allowRotate) candidates.push(checkFit(pW, pL, pH, '水平旋轉 90° (W×L)'));
+  if(allowVerticalRotate){
+    candidates.push(checkFit(pW, pH, pL, '垂直旋轉 (H→W, L→H)'));
+    candidates.push(checkFit(pH, pW, pL, '垂直旋轉 (H→W, L→H) + 水平'));
+    candidates.push(checkFit(pL, pH, pW, '垂直旋轉 (H→L, W→H)'));
+    candidates.push(checkFit(pH, pL, pW, '垂直旋轉 (H→L, W→H) + 水平'));
+  }
+
+  const valid = candidates.filter(c => c !== null);
+  if(valid.length === 0){
+    return {count:0, isSlotMode:true, reason:`工件無法放入單格（格淨尺寸 ${slotUsableL.toFixed(1)}×${slotUsableW.toFixed(1)} mm），請嘗試旋轉或減小工件/間隔`};
+  }
+
+  // 擇優：數量相同（固定 slotsL*slotsW），優先選「工件佔用率高」的方向
+  let best = valid[0];
+  for(const c of valid){
+    const util = (c.pl * c.pw) / (slotUsableL * slotUsableW);
+    const bestUtil = (best.pl * best.pw) / (slotUsableL * slotUsableW);
+    if(util > bestUtil) best = c;
+  }
+
+  // 計算整體佔用尺寸（含隔板與間隔）
+  const usedL = slotsL * best.pl + (slotsL - 1) * gap + dividerCountW * thick;
+  const usedW = slotsW * best.pw + (slotsW - 1) * gap + dividerCountL * thick;
+  const remainL = bL - usedL - wall*2;
+  const remainW = bW - usedW - wall*2;
+  const util = (best.count * best.pl * best.pw) / (bL * bW) * 100;
+
+  return {
+    count: best.count,
+    nx: best.nx,
+    ny: best.ny,
+    pl: best.pl,
+    pw: best.pw,
+    ph: best.ph,
+    usedL,
+    usedW,
+    remainL,
+    remainW,
+    util,
+    orientation: best.orientation,
+    isSlotMode: true,
+    isRaster: false,
+    slotUsableL,
+    slotUsableW,
+    slotsL,
+    slotsW,
+    teilerLenL,
+    teilerLenW,
+    dividerThick: thick,
+    wall,
+    effL,
+    effW
+  };
+}
+
+function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wallGap, type, raster, divider, useSlotMode, slotsL, slotsW, teilerLenL, teilerLenW){
   if(pH > bH) return {count:0, reason:'工件高度 '+pH+' 超過籃具高度 '+bH+'，無法放入', isRaster:type!=='free'};
   if(pL<=0||pW<=0||pH<=0||bL<=0||bW<=0) return {count:0, reason:'尺寸異常', isRaster:type!=='free'};
+  
+  // 槽模式優先
+  if(useSlotMode && slotsL > 0 && slotsW > 0){
+    return calcSlotMode(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,slotsL,slotsW,teilerLenL,teilerLenW,divider);
+  }
+
   const wall = wallGap ? gap : 0;
   const effL = bL - wall*2;
   const effW = bW - wall*2;
@@ -650,23 +801,107 @@ function buildScene(bL,bW,bH, layout, gap){
         }
       }
     }
+  } else if(layout.isSlotMode){
+    // 槽模式：繪製指定長度的 Teiler 隔板
+    const halfL=bL/2, halfW=bW/2;
+    const dividerH = Math.min(bH*0.9, Math.max(28, bH-4));
+    const thick = layout.dividerThick || 3;
+    const slotsL = layout.slotsL;
+    const slotsW = layout.slotsW;
+    const teilerLenL = layout.teilerLenL; // 縱向 Teiler 長度（沿寬向）
+    const teilerLenW = layout.teilerLenW; // 橫向 Teiler 長度（沿長向）
+    const wall = layout.wall || 0;
+    const effL = layout.effL;
+    const effW = layout.effW;
+    const slotUsableL = layout.slotUsableL;
+    const slotUsableW = layout.slotUsableW;
+
+    // 計算每格實際佔用（工件+間隔+隔板厚度）
+    const gapVal = gap;
+    const pitchL = slotUsableL + gapVal;
+    const pitchW = slotUsableW + gapVal;
+
+    // 總佔用尺寸（含隔板厚度）
+    const totalDividerThickL = (slotsW - 1) * thick; // 橫向 Teiler 佔用的長向總厚度
+    const totalDividerThickW = (slotsL - 1) * thick; // 縱向 Teiler 佔用的寬向總厚度
+    const totalUsedL = slotsL * slotUsableL + (slotsL - 1) * gapVal + totalDividerThickL;
+    const totalUsedW = slotsW * slotUsableW + (slotsW - 1) * gapVal + totalDividerThickW;
+    const offsetL = (bL - totalUsedL) / 2;
+    const offsetW = (bW - totalUsedW) / 2;
+
+    // 繪製縱向 Teiler（沿寬向延伸，長度 teilerLenL，位於格子之間的長向位置）
+    // 有 (slotsL - 1) 根縱向 Teiler
+    for(let s=0;s<stackCount;s++){
+      const yBaseDiv = s*bH;
+      for(let k=1; k<slotsL; k++){
+        // 第 k 根縱向 Teiler 的長向中心位置
+        const centerL = -halfL + offsetL + k * slotUsableL + (k - 1) * gapVal + (k - 1) * thick + thick/2;
+        // Teiler 沿寬向放置，長度 teilerLenL，置中
+        const geo = new THREE.BoxGeometry(thick, dividerH, teilerLenL);
+        const matD = new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
+        const mesh = new THREE.Mesh(geo, matD);
+        mesh.position.set(centerL, yBaseDiv + dividerH/2+2, 0);
+        dividerGroup.add(mesh);
+      }
+      // 繪製橫向 Teiler（沿長向延伸，長度 teilerLenW，位於格子之間的寬向位置）
+      for(let k=1; k<slotsW; k++){
+        const centerW = -halfW + offsetW + k * slotUsableW + (k - 1) * gapVal + (k - 1) * thick + thick/2;
+        const geo = new THREE.BoxGeometry(teilerLenW, dividerH, thick);
+        const matD = new THREE.MeshStandardMaterial({color:0xc2a84b, transparent:true, opacity:0.55, roughness:0.6});
+        const mesh = new THREE.Mesh(geo, matD);
+        mesh.position.set(0, yBaseDiv + dividerH/2+2, centerW);
+        dividerGroup.add(mesh);
+      }
+    }
+
+    // 繪製網格線（可選，用虛線表示格子邊界）
+    const lineColor = 0x3a4a6a;
+    const mat = new THREE.LineBasicMaterial({color:lineColor, transparent:true, opacity:0.25});
+    for(let s=0;s<stackCount;s++){
+      const y = s*bH + 2.5;
+      // 縱向格線
+      for(let k=0; k<=slotsL; k++){
+        const xPos = -halfL + offsetL + k * slotUsableL + k * gapVal + (k > 0 ? (k-1)*thick : 0) + (k>0 ? thick : 0);
+        // 簡化：只畫格子邊界
+      }
+    }
   }
 
   if(layout.count>0){
     const pl=layout.pl, pw=layout.pw, ph=layout.ph;
     const isRaster=layout.isRaster;
-    let totalL, totalW, pitchL, pitchW, lastL, lastW;
+    const isSlotMode=layout.isSlotMode;
+    let totalL, totalW, pitchL, pitchW, lastL, lastW, offsetL, offsetW;
     if(isRaster){
       totalL = (layout.nx-1)*layout.pitchL + layout.lastL;
       totalW = (layout.ny-1)*layout.pitchW + layout.lastW;
       pitchL=layout.pitchL; pitchW=layout.pitchW; lastL=layout.lastL; lastW=layout.lastW;
+      offsetL = (bL - totalL)/2;
+      offsetW = (bW - totalW)/2;
+    } else if(isSlotMode){
+      // 槽模式：使用 layout 中預計算的數值
+      const gapVal = gap;
+      const thick = layout.dividerThick || 3;
+      const slotsL = layout.slotsL;
+      const slotsW = layout.slotsW;
+      const slotUsableL = layout.slotUsableL;
+      const slotUsableW = layout.slotUsableW;
+      const totalDividerThickL = (slotsW - 1) * thick;
+      const totalDividerThickW = (slotsL - 1) * thick;
+      totalL = slotsL * slotUsableL + (slotsL - 1) * gapVal + totalDividerThickL;
+      totalW = slotsW * slotUsableW + (slotsW - 1) * gapVal + totalDividerThickW;
+      offsetL = (bL - totalL) / 2;
+      offsetW = (bW - totalW) / 2;
+      // 每格中心間距
+      pitchL = slotUsableL + gapVal + thick;
+      pitchW = slotUsableW + gapVal + thick;
     } else {
       const gapVal=parseInt(els.gap.value)||0;
       totalL = layout.nx*pl + (layout.nx-1)*gapVal;
       totalW = layout.ny*pw + (layout.ny-1)*gapVal;
+      offsetL = (bL - totalL)/2;
+      offsetW = (bW - totalW)/2;
     }
-    const offsetL = (bL - totalL)/2;
-    const offsetW = (bW - totalW)/2;
     for(let s=0;s<stackCount;s++){
       const yBase=s*bH;
       for(let ix=0; ix<layout.nx; ix++){
@@ -677,6 +912,17 @@ function buildScene(bL,bW,bH, layout, gap){
             const cellStartW = -bW/2 + offsetW + iz*pitchW;
             x = cellStartL + pl/2 + (lastL - pl)/2;
             z = cellStartW + pw/2 + (lastW - pw)/2;
+          } else if(isSlotMode){
+            // 槽模式：工件置於每格中心
+            const gapVal = gap;
+            const thick = layout.dividerThick || 3;
+            const slotUsableL = layout.slotUsableL;
+            const slotUsableW = layout.slotUsableW;
+            // 格子起始位置（含隔板厚度）
+            const cellStartL = -bL/2 + offsetL + ix * (slotUsableL + gapVal + thick) + (ix > 0 ? thick/2 : 0);
+            const cellStartW = -bW/2 + offsetW + iz * (slotUsableW + gapVal + thick) + (iz > 0 ? thick/2 : 0);
+            x = cellStartL + pl/2 + (slotUsableL - pl)/2;
+            z = cellStartW + pw/2 + (slotUsableW - pw)/2;
           } else {
             const gapVal=parseInt(els.gap.value)||0;
             x = -bL/2 + offsetL + pl/2 + ix*(pl+gapVal);
@@ -684,7 +930,7 @@ function buildScene(bL,bW,bH, layout, gap){
           }
           const y = yBase + ph/2 + 2;
           const geo=new THREE.BoxGeometry(pl, ph, pw);
-          const mat=new THREE.MeshStandardMaterial({color: isRaster?0x6ec1ff:0x4dabf7, roughness:0.5, metalness:0.08});
+          const mat=new THREE.MeshStandardMaterial({color: isRaster?0x6ec1ff:(isSlotMode?0x8eff8e:0x4dabf7), roughness:0.5, metalness:0.08});
           if(wireframe) mat.wireframe=true;
           const mesh=new THREE.Mesh(geo, mat); mesh.position.set(x,y,z); mesh.castShadow=true; mesh.receiveShadow=true;
           const eGeo=new THREE.EdgesGeometry(geo); const eMat=new THREE.LineBasicMaterial({color:0x0a1a33}); const lines=new THREE.LineSegments(eGeo,eMat); mesh.add(lines);
@@ -718,16 +964,26 @@ function computeAndRender(){
   const divider=parseFloat(els.dividerThick.value)||0;
   const stackCount=Math.min(100, Math.max(1, parseInt(els.stackCount.value)||1));
   const overallH=bH*stackCount;
-  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider);
+
+  // 槽模式參數
+  const useSlotMode = els.slotMode.checked;
+  const slotsL = parseInt(els.slotsL.value)||0;
+  const slotsW = parseInt(els.slotsW.value)||0;
+  const teilerLenL = parseInt(els.teilerLenL.value)||0;
+  const teilerLenW = parseInt(els.teilerLenW.value)||0;
+
+  const layout = calcLayout(bL,bW,bH,pL,pW,pH,gap,allowRotate,allowVerticalRotate,wallGap,type,raster,divider, useSlotMode, slotsL, slotsW, teilerLenL, teilerLenW);
   if(layout.count>0){
     els.resultNum.innerHTML = layout.count + ' <small>個</small>';
     els.orientationBadge.textContent = layout.orientation;
     els.orientationBadge.style.background='#1a2744'; els.orientationBadge.style.color='#8ec0ff';
     if(layout.isRaster){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent=layout.raster+'mm Raster · 隔板'+layout.divider+'mm'; }
-    else els.rasterBadge.style.display='none';
+    else if(layout.isSlotMode){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='插槽模式 · 隔板'+layout.dividerThick+'mm'; els.rasterBadge.style.background='#0f1f14'; els.rasterBadge.style.borderColor='#2b5c3a'; els.rasterBadge.style.color='#8affb0'; }
+    else { els.rasterBadge.style.display='none'; }
     const totalCount=layout.count*stackCount;
     let detail = '★ 最佳排列 每層 '+layout.nx+' × '+layout.ny+' = '+layout.count+' 個，'+stackCount+'層共 '+totalCount+' 個<br>（長向 '+layout.nx+' × 寬向 '+layout.ny+'）<br>單個工件 '+layout.pl+'×'+layout.pw+'×'+layout.ph+' mm · 間隔 '+gap+'mm';
     if(layout.isRaster) detail += ' · 取整至 '+layout.raster+'mm 網格（隔板 '+layout.divider+'mm）<br>每件佔據 '+layout.pitchL+'×'+layout.pitchW+' mm 網格（含間隔），最後件 '+layout.lastL+'×'+layout.lastW+' mm';
+    else if(layout.isSlotMode) detail += ' · 插槽模式：'+layout.slotsL+'×'+layout.slotsW+' 格，單格淨尺寸 '+layout.slotUsableL.toFixed(1)+'×'+layout.slotUsableW.toFixed(1)+' mm（含 '+layout.dividerThick+'mm 隔板）<br>Teiler 長 '+layout.teilerLenL+'mm / 寬 '+layout.teilerLenW+'mm';
     els.resultDetail.innerHTML=detail;
     const floorUtil = layout.util.toFixed(1);
     const volUtil = ((layout.count * layout.pl * layout.pw * layout.ph)/(bL*bW*bH)*100).toFixed(1);
@@ -742,6 +998,7 @@ function computeAndRender(){
       kv('整體高度', bH+'×'+stackCount+' = '+overallH+' mm'),
     ].join('');
     if(layout.isRaster) kvHtml += kv('網格利用率(含隔板)', layout.utilGrid.toFixed(1)+'%');
+    if(layout.isSlotMode) kvHtml += kv('單格淨尺寸', layout.slotUsableL.toFixed(1)+' × '+layout.slotUsableW.toFixed(1)+' mm') + kv('隔板厚度', layout.dividerThick+' mm') + kv('插槽配置', layout.slotsL+'×'+layout.slotsW+' 格');
     els.resultKV.innerHTML=kvHtml;
     if(layout.isRaster && layout.freeBest){
       const loss = layout.freeBest.count - layout.count;
@@ -762,8 +1019,9 @@ function computeAndRender(){
     els.orientationBadge.style.background='#3a1a1a'; els.orientationBadge.style.color='#ffb0b0';
     els.rasterBadge.style.display = layout.isRaster ? 'inline-block' : 'none';
     if(layout.isRaster) els.rasterBadge.textContent= raster+'mm Raster';
+    else if(layout.isSlotMode) { els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='插槽模式'; els.rasterBadge.style.background='#3a1a1a'; els.rasterBadge.style.borderColor='#5c2b2b'; els.rasterBadge.style.color='#ffb0b0'; }
     els.resultDetail.textContent = layout.reason || '無法擺放';
-    els.resultKV.innerHTML = kv('籃具', bL+'×'+bW+'×'+bH+' mm'+(layout.isRaster?' · '+raster+'mm Raster':' · 自由')) + kv('工件', pL+'×'+pW+'×'+pH+' mm') + kv('間隔', gap+'mm');
+    els.resultKV.innerHTML = kv('籃具', bL+'×'+bW+'×'+bH+' mm'+(layout.isRaster?' · '+raster+'mm Raster': layout.isSlotMode?' · 插槽模式':' · 自由')) + kv('工件', pL+'×'+pW+'×'+pH+' mm') + kv('間隔', gap+'mm');
     if(layout.freeBest && layout.freeBest.count>0){
       els.compareBox.style.display='block';
       els.compareBox.innerHTML = '<b>自由擺放可放 '+layout.freeBest.count+' 個</b>，但 Raster 限制下無法放入。試著減小工件或間隔，或切換為自由籃具。';
@@ -805,7 +1063,7 @@ function updateCapacity(perBasket){
 }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays].forEach(el=>{
+  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.slotMode, els.slotsL, els.slotsW, els.teilerLenL, els.teilerLenW].forEach(el=>{
     el.addEventListener(ev, computeAndRender);
   });
 });
@@ -816,6 +1074,7 @@ els.basketW.addEventListener('input', updateHints);
 els.stackCount.addEventListener('input', updateOverallSize);
 els.stackCount.addEventListener('change', updateOverallSize);
 els.basketH.addEventListener('input', updateOverallSize);
+els.slotMode.addEventListener('change', toggleSlotMode);
 
 initThree();
 refreshBasketSelect();
