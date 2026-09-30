@@ -114,8 +114,8 @@ main{flex:1;display:flex;min-height:0}
         <option value="150"></option>
         <option value="200"></option>
       </datalist>
-      <div class="hint" id="heightHint">可選高度: 30/50/80/96 mm（預設最高）</div>
-      <div class="hint" style="color:#8ec0ff">所有籃具可選高度：<b>13</b>(Deckel) · <b>28/42/69/96</b>(Teiler) · <b>30/50/80/96/100</b>(標準) · <b>36/63</b>(Toprahmen) · <b>70-230</b>(tech-rack，mm級客製) — 直接輸入或下拉選擇</div>
+<div class="hint" id="heightHint">可選高度: 28/42/69/96 mm（預設最高 96，對應柱高），其他高度請直接輸入</div>
+<div class="hint" style="color:#8ec0ff">所有籃具可選高度：<b>13</b>(Deckel) · <b>28/42/69/96</b>(Teiler/柱子) · <b>30/50/80/96/100</b>(標準) · <b>36/63</b>(Toprahmen) · <b>70-230</b>(tech-rack，mm級客製) — 直接輸入或下拉選擇</div>
       <div class="row">
         <label>堆疊數</label><input id="stackCount" type="number" min="1" max="100" step="1" value="1">
         <span style="font-size:12px;color:#6c728a">層（上限 100）</span>
@@ -124,13 +124,12 @@ main{flex:1;display:flex;min-height:0}
         <label>角落柱尺寸</label><input id="cornerColumnSize" type="number" min="0" step="5" value="0"><span style="font-size:12px;color:#6c728a">mm（0=無，四角柱子占用空間，實際可放空間更小）</span>
       </div>
       <div class="hint" id="cornerColumnHint" style="display:none">注：角落柱子會減少有效放置區域，計算會自動扣除邊框兩側的柱子寬度。tech-rack custom 400×300 等規格建議開啟固定格數模式以獲得更精確的佈局。</div>
-      <div class="hint" id="overallSize">整體尺寸: 425×276×96 mm（1 層，單層 96mm）</div>
+      <div class="hint" id="overallSize">整體尺寸: 425×276×96 mm（1 層，單層 96mm，柱高 28/42/69/96mm）</div>
       <div id="rasterBox" class="rasterBox hidden">
         <div style="font-size:11px;color:#8ec0ff;margin-bottom:6px"><b>Raster 隔板限制</b> — 參考 FRIES 2026 型錄 p.6-10 / p.74</div>
-        <div class="row"><label>Raster</label><input id="raster" type="number" min="1" step="1" value="9"><span style="font-size:11px;color:#6c728a">mm</span></div>
+        <div class="row"><label>Raster</label><input id="raster" type="number" min="1" step="1" value="13"><span style="font-size:11px;color:#6c728a">mm</span></div>
         <div class="row"><label>隔板厚</label><input id="dividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:11px;color:#6c728a">mm (Teilerstärke)</span></div>
-        <div class="hint" id="dividerHint">預設 3 mm（FRIES Teilerstärke；自由擺放 0 mm）</div>
-        <div class="hint">9 mm = variogrid/techtray，15 mm = tech-rack。隔板只能架在 Raster 倍數位置，每個工件+間隔需向上取整到 Raster 倍數，造成額外空間損耗。Deckel für Grundkorb 600×400×13 可與 variogrid/tech-rack 組合，但同樣受此限制。</div>
+<div class="hint" id="dividerHint">預設 3 mm（FRIES Teilerstärke；自由擺放 0 mm）。間距 13mm 為 9mm/15mm Raster 之外的標準間隔。隔板只能架在 13mm 網格位置，每個工件+間隔需向上取整到 13mm 倍數。若啟用「固定格數模式」，隔板將從第2列第2行開始排列（避開角落柱子）。</div>
       </div>
       <div class="row">
         <label>名稱</label><input id="basketName" type="text" placeholder="例如 400x300x96 / FRIES Deckel 600x400x13">
@@ -161,7 +160,7 @@ main{flex:1;display:flex;min-height:0}
         <h4 style="font-size:12px;color:#8ec0ff;margin-bottom:8px">📐 固定格數模式（如 tech-rack custom 19×27）</h4>
         <div class="checkRow"><input type="checkbox" id="fixedGridMode" onchange="toggleFixedGridMode()"><label for="fixedGridMode" style="cursor:pointer">啟用固定格數：指定長/寬向格數，隔板自動對齊 Raster，單元格內用間隔排版</label></div>
         <div id="fixedGridInputs" style="display:none;margin-top:8px">
-          <div class="row"><label>Raster</label><input id="fixedGridRaster" type="number" min="1" step="1" value="9"><span style="font-size:12px;color:#6c728a">mm（9=variogrid/techtray, 15=tech-rack）</span></div>
+          <div class="row"><label>Raster</label><input id="fixedGridRaster" type="number" min="1" step="1" value="13"><span style="font-size:12px;color:#6c728a">mm（9=variogrid/techtray, 15=tech-rack）</span></div>
           <div class="row"><label>長向格數</label><input id="fixedGridSlotsL" type="number" min="1" max="50" step="1" value="19"><span style="font-size:12px;color:#6c728a">個</span></div>
           <div class="row"><label>寬向格數</label><input id="fixedGridSlotsW" type="number" min="1" max="50" step="1" value="27"><span style="font-size:12px;color:#6c728a">個</span></div>
           <div class="row"><label>隔板厚</label><input id="fixedGridDividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:12px;color:#6c728a">mm（Teilerstärke）</span></div>
@@ -259,12 +258,12 @@ const els = {
 const STORAGE_KEY = 'basketPresets_v2';
 const DEFAULT_PRESETS = [
   {id:'default-400x300x96', name:'標準籃 400×300×96（自由）', L:400,W:300,H:96, type:'free', raster:0, divider:0},
-  {id:'fries-deckel-600x400x13', name:'FRIES Deckel für Grundkorb 600×400×13', L:600,W:400,H:13, type:'variogrid9', raster:9, divider:3},
-  {id:'fries-variogrid-600x400x13', name:'FRIES variogrid Grundplatte 600×400×13 (9mm)', L:600,W:400,H:13, type:'variogrid9', raster:9, divider:3},
-  {id:'fries-variogrid-low-600x400x36', name:'FRIES variogrid + Toprahmen niedrig 600×400×36', L:600,W:400,H:36, type:'variogrid9', raster:9, divider:3},
-  {id:'fries-variogrid-high-600x400x63', name:'FRIES variogrid + Toprahmen hoch 600×400×63', L:600,W:400,H:63, type:'variogrid9', raster:9, divider:3},
-  {id:'fries-techrack-600x400x120', name:'FRIES tech-rack 600×400×120 (15mm)', L:600,W:400,H:120, type:'techrack15', raster:15, divider:3},
-  {id:'fries-techtray-425x276', name:'FRIES techtray 425×276 (9mm Schäfer)', L:425,W:276,H:96, type:'variogrid9', raster:9, divider:3},
+  {id:'fries-deckel-600x400x13', name:'FRIES Deckel für Grundkorb 600×400×13', L:600,W:400,H:13, type:'variogrid13', raster:13, divider:3},
+  {id:'fries-variogrid-600x400x13', name:'FRIES variogrid Grundplatte 600×400×13 (13mm)', L:600,W:400,H:13, type:'variogrid13', raster:13, divider:3},
+  {id:'fries-variogrid-low-600x400x36', name:'FRIES variogrid + Toprahmen niedrig 600×400×36', L:600,W:400,H:36, type:'variogrid13', raster:13, divider:3},
+  {id:'fries-variogrid-high-600x400x63', name:'FRIES variogrid + Toprahmen hoch 600×400×63', L:600,W:400,H:63, type:'variogrid13', raster:13, divider:3},
+  {id:'fries-techrack-600x400x120', name:'FRIES tech-rack 600×400×120 (13mm)', L:600,W:400,H:120, type:'techrack13', raster:13, divider:3},
+  {id:'fries-techtray-425x276', name:'FRIES techtray 425×276 (13mm Schäfer)', L:425,W:276,H:96, type:'variogrid13', raster:13, divider:3},
   {id:'preset-300x200x100', name:'小籃 300×200×100（自由）', L:300,W:200,H:100, type:'free', raster:0, divider:0},
 ];
 
@@ -284,8 +283,8 @@ let presets = loadPresets();
 function savePresets(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(presets)); }
 
 function typeToRaster(type){
-  if(type==='variogrid9') return 9;
-  if(type==='techrack15') return 15;
+  if(type==='variogrid13') return 13;
+  if(type==='techrack13') return 13;
   return 0;
 }
 function syncRasterBox(){
@@ -566,12 +565,15 @@ function calcFixedGridMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVertic
   }
 
   // 隔板位置（從邊框開始，每隔 finalPitch 放一根）
+  // 若有高度柱，必須從第2列第2行開始插入，避免與柱子干涉
+  const startIndexL = (ccs > 0 ? 2 : 1);
+  const startIndexW = (ccs > 0 ? 2 : 1);
   const dividersL = [];
-  for(let i=1; i<slotsL; i++){
+  for(let i=startIndexL; i<slotsL; i++){
     dividersL.push(i * finalPitchL);
   }
   const dividersW = [];
-  for(let i=1; i<slotsW; i++){
+  for(let i=startIndexW; i<slotsW; i++){
     dividersW.push(i * finalPitchW);
   }
 
@@ -700,6 +702,11 @@ function calcLayout(bL,bW,bH,pL,pW,pH,gap, allowRotate, allowVerticalRotate, wal
   const wall = wallGap ? gap : 0;
   const effL = bL - wall*2 - ccs*2;
   const effW = bW - wall*2 - ccs*2;
+  
+  // 檢查工件寬度是否超過有效區域（扣除角落柱子後）
+  if(pL > effL || pW > effW){
+    return {count:0, reason:'工件寬度 '+pL+'×'+pW+'mm 超過扣除角落柱子後的有效區域 '+effL+'×'+effW+'mm', isRaster:type!=='free'};
+  }
   
   // 固定格數模式優先
   if(useFixedGridMode && slotsL > 0 && slotsW > 0){
@@ -914,7 +921,7 @@ function buildScene(bL,bW,bH, layout, gap){
     allBaskets.push(m);
     const edges = new THREE.EdgesGeometry(basketGeo); const lineMat=new THREE.LineBasicMaterial({color:0x5a6b9a}); const e=new THREE.LineSegments(edges,lineMat); e.position.copy(m.position); basketGroup.add(e);
     if(s===0) basketEdges=e;
-    const bottomGeo=new THREE.BoxGeometry(bL-2,2,bW-2); const bottomMat=new THREE.MeshStandardMaterial({color:0x243055, roughness:0.8}); const bottom=new THREE.Mesh(bottomGeo,bottomMat); bottom.position.set(0,yBase+1,0); basketGroup.add(bottom);
+    const bottomGeo=new THREE.BoxGeometry(bL-1,1,bW-1); const bottomMat=new THREE.MeshStandardMaterial({color:0x243055, roughness:0.8}); const bottom=new THREE.Mesh(bottomGeo,bottomMat); bottom.position.set(0,yBase+0.5,0); basketGroup.add(bottom);
     if(s===0) basketMesh.userData.bottom=bottom;
   }
   // 為了相容舊邏輯，保留 basketMesh 為第一層
@@ -1253,7 +1260,7 @@ function computeAndRender(){
 
   // 固定格數模式參數
   const useFixedGridMode = els.fixedGridMode.checked;
-  const fixedGridRaster = parseInt(els.fixedGridRaster.value)||9;
+  const fixedGridRaster = parseInt(els.fixedGridRaster.value)||13;
   const fixedGridDividerThick = parseFloat(els.fixedGridDividerThick.value)||3;
   const slotsL = parseInt(els.fixedGridSlotsL.value)||0;
   const slotsW = parseInt(els.fixedGridSlotsW.value)||0;
@@ -1267,6 +1274,12 @@ function computeAndRender(){
     else if(layout.isFixedGridMode){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='固定格數 '+layout.gridRaster+'mm·隔板'+layout.gridDividerThick+'mm'; els.rasterBadge.style.background='#0f1f14'; els.rasterBadge.style.borderColor='#2b5c3a'; els.rasterBadge.style.color='#8affb0'; }
     else if(layout.isSlotMode){ els.rasterBadge.style.display='inline-block'; els.rasterBadge.textContent='格數模式 · 隔板'+layout.dividerThick+'mm'; els.rasterBadge.style.background='#0f1f14'; els.rasterBadge.style.borderColor='#2b5c3a'; els.rasterBadge.style.color='#8affb0'; }
     else { els.rasterBadge.style.display='none'; }
+    // 顯示干涉警告
+    if(layout.reason && (layout.reason.includes('超過') || layout.reason.includes('干涉') || layout.reason.includes('溢位'))){
+      els.resultDetail.innerHTML = '<b>⚠ 干涉警告</b><br>' + layout.reason;
+    } else {
+      els.resultDetail.innerHTML=detail;
+    }
     const totalCount=layout.count*stackCount;
     let detail = '★ 最佳排列 每層 '+layout.nx+' × '+layout.ny+' = '+layout.count+' 個，'+stackCount+'層共 '+totalCount+' 個<br>（長向 '+layout.nx+' × 寬向 '+layout.ny+'）<br>單個工件 '+layout.pl+'×'+layout.pw+'×'+layout.ph+' mm · 間隔 '+gap+'mm';
     if(layout.isRaster) detail += ' · 取整至 '+layout.raster+'mm 網格（隔板 '+layout.divider+'mm）<br>每件佔據 '+layout.pitchL+'×'+layout.pitchW+' mm 網格（含間隔），最後件 '+layout.lastL+'×'+layout.lastW+' mm';
