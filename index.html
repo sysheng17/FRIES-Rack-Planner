@@ -158,17 +158,6 @@ main{flex:1;display:flex;min-height:0}
       <div class="checkRow"><input type="checkbox" id="allowVerticalRotate" checked><label for="allowVerticalRotate" style="cursor:pointer">允許工件垂直旋轉 90° 自動擇優（高度可轉為長/寬）</label></div>
       <div class="checkRow"><input type="checkbox" id="wallGap"><label for="wallGap" style="cursor:pointer">籃具邊框也保留間隔（四周留白）</label></div>
       <div class="divider"></div>
-      <div class="card" style="margin-top:8px;padding:10px;background:#1a1f2e;border:1px dashed #3a4a6a;border-radius:8px">
-        <h4 style="font-size:12px;color:#8ec0ff;margin-bottom:8px">📐 固定格數模式（如 tech-rack custom 19×27）</h4>
-        <div class="checkRow"><input type="checkbox" id="fixedGridMode" onchange="toggleFixedGridMode()"><label for="fixedGridMode" style="cursor:pointer">啟用固定格數：指定長/寬向格數，隔板自動對齊 Raster，單元格內用間隔排版</label></div>
-        <div id="fixedGridInputs" style="display:none;margin-top:8px">
-          <div class="row"><label>Raster</label><input id="fixedGridRaster" type="number" min="1" step="1" value="13"><span style="font-size:12px;color:#6c728a">mm（9=variogrid/techtray, 15=tech-rack）</span></div>
-          <div class="row"><label>長向格數</label><input id="fixedGridSlotsL" type="number" min="1" max="50" step="1" value="19"><span style="font-size:12px;color:#6c728a">個</span></div>
-          <div class="row"><label>寬向格數</label><input id="fixedGridSlotsW" type="number" min="1" max="50" step="1" value="27"><span style="font-size:12px;color:#6c728a">個</span></div>
-          <div class="row"><label>隔板厚</label><input id="fixedGridDividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:12px;color:#6c728a">mm（Teilerstärke）</span></div>
-          <div class="hint" style="color:#8ec0ff">格數固定時，隔板自動放在 Raster 倍數位置（平均分配），單元格淨尺寸 = 格距 - 隔板厚。工件在單元格內按間隔排版，不跨越隔板。tech-rack custom 400×300 預設 19×27 格，Raster 9mm。</div>
-        </div>
-      </div>
       <div class="hint">間隔為工件之間最小距離。高度僅檢查是否放得下，不堆疊。</div>
     </div>
 
@@ -361,27 +350,7 @@ function toggleGridMode(){
   computeAndRender();
 }
 
-function toggleFixedGridMode(){
-  const enabled = els.fixedGridMode.checked;
-  els.fixedGridInputs.style.display = enabled ? 'block' : 'none';
-  if(enabled){
-    // tech-rack custom 400x300 預設 19x27 格
-    if(els.basketL.value==='400' && els.basketW.value==='300'){
-      els.fixedGridSlotsL.value = '19';
-      els.fixedGridSlotsW.value = '27';
-      els.fixedGridRaster.value = '9';
-      els.fixedGridDividerThick.value = '3';
-    }
-    // techtray 425x276 可設為 3x2 格等
-    else if(els.basketL.value==='425' && els.basketW.value==='276'){
-      els.fixedGridSlotsL.value = '3';
-      els.fixedGridSlotsW.value = '2';
-      els.fixedGridRaster.value = '9';
-      els.fixedGridDividerThick.value = '3';
-    }
-  }
-  computeAndRender();
-}
+
 els.basketType.addEventListener('change', syncRasterBox);
 
 function refreshBasketSelect(){
@@ -1439,6 +1408,18 @@ setTimeout(()=>{
     else if(c.width===0 || c.height===0){ showError('Canvas 尺寸為 0，請檢查 #viewer 容器高度'); }
   }catch(e){}
 }, 1500);
+['input','change'].forEach(ev=>{
+  [els.basketBottomL,els.basketBottomW,els.basketBottomH,els.columnHeight,els.gridSlotsL,els.gridSlotsW,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays].forEach(el=>{
+    if(el) el.addEventListener(ev, computeAndRender);
+  });
+});
+els.basketSelect.addEventListener('change', applyBasketSelect);
+els.basketType.addEventListener('change', computeAndRender);
+els.basketL.addEventListener('input', updateHints);
+els.basketW.addEventListener('input', updateHints);
+els.stackCount.addEventListener('input', updateOverallSize);
+els.stackCount.addEventListener('change', updateOverallSize);
+els.basketH.addEventListener('input', updateOverallSize);
 </script>
 </body>
 </html>
