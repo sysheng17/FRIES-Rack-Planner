@@ -1408,7 +1408,7 @@ function updateCapacity(perBasket){
 }
 
 ['input','change'].forEach(ev=>{
-  [els.basketL,els.basketW,els.basketH,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.fixedGridMode, els.fixedGridRaster, els.fixedGridSlotsL, els.fixedGridSlotsW, els.fixedGridDividerThick, els.cornerColumnSize].forEach(el=>{
+  [els.basketBottomL,els.basketBottomW,els.basketBottomH,els.columnHeight,els.gridSlotsL,els.gridSlotsW,els.stackCount,els.partL,els.partW,els.partH,els.gap,els.allowRotate,els.allowVerticalRotate,els.wallGap,els.raster,els.dividerThick,els.dailyHours,els.cleanTime,els.workDays, els.fixedGridMode, els.fixedGridRaster, els.fixedGridSlotsL, els.fixedGridSlotsW, els.fixedGridDividerThick, els.cornerColumnSize].forEach(el=>{
     if(el) el.addEventListener(ev, computeAndRender);
   });
 });
