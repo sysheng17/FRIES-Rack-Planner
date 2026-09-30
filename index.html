@@ -148,10 +148,12 @@ main{flex:1;display:flex;min-height:0}
 
     <div class="card">
       <h3>📦 工件尺寸（不可堆疊）</h3>
-      <div class="row"><label>長 L</label><input id="partL" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>寬 W</label><input id="partW" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="0.1" value="23.5"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>間隔</label><input id="gap" type="number" min="0" step="1" value="5"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>底板長</label><input id="basketBottomL" type="number" min="1" step="1" value="425"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>底板寬</label><input id="basketBottomW" type="number" min="1" step="1" value="276"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>底板高</label><input id="basketBottomH" type="number" min="1" step="1" value="13"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>柱高</label><input id="columnHeight" type="number" min="1" step="1" value="96"><span style="font-size:12px;color:#6c728a">mm（28/42/69/96 為標準 Teiler 高度）</span></div>
+      <div class="row"><label>網格長邊格數</label><input id="gridSlotsL" type="number" min="1" step="1" value="28"><span style="font-size:12px;color:#6c728a">個</span></div>
+      <div class="row"><label>網格寬邊格數</label><input id="gridSlotsW" type="number" min="1" step="1" value="20"><span style="font-size:12px;color:#6c728a">個</span></div>
       <div class="checkRow"><input type="checkbox" id="allowRotate" checked><label for="allowRotate" style="cursor:pointer">允許工件水平旋轉 90° 自動擇優</label></div>
       <div class="checkRow"><input type="checkbox" id="allowVerticalRotate" checked><label for="allowVerticalRotate" style="cursor:pointer">允許工件垂直旋轉 90° 自動擇優（高度可轉為長/寬）</label></div>
       <div class="checkRow"><input type="checkbox" id="wallGap"><label for="wallGap" style="cursor:pointer">籃具邊框也保留間隔（四周留白）</label></div>
@@ -253,6 +255,12 @@ const els = {
   canvas: document.getElementById('canvas'),
   wireBtn: document.getElementById('wireBtn'),
   dividerBtn: document.getElementById('dividerBtn'),
+  basketBottomL: document.getElementById('basketBottomL'),
+  basketBottomW: document.getElementById('basketBottomW'),
+  basketBottomH: document.getElementById('basketBottomH'),
+  columnHeight: document.getElementById('columnHeight'),
+  gridSlotsL: document.getElementById('gridSlotsL'),
+  gridSlotsW: document.getElementById('gridSlotsW'),
 };
 
 const STORAGE_KEY = 'basketPresets_v2';
@@ -1246,17 +1254,29 @@ function buildScene(bL,bW,bH, layout, gap){
 
 function computeAndRender(){
   updateOverallSize();
-  const bL=parseInt(els.basketL.value)||0, bW=parseInt(els.basketW.value)||0, bH=parseInt(els.basketH.value)||0;
-  const pL=parseFloat(els.partL.value)||0, pW=parseFloat(els.partW.value)||0, pH=parseFloat(els.partH.value)||0;
+  const bL=parseInt(els.basketBottomL.value)||425, bW=parseInt(els.basketBottomW.value)||276, bH=parseInt(els.basketBottomH.value)||13;
+  const columnHeight=parseInt(els.columnHeight.value)||96;
+  const gridSlotsL=parseInt(els.gridSlotsL.value)||28;
+  const gridSlotsW=parseInt(els.gridSlotsW.value)||20;
   const gap=parseInt(els.gap.value)||0;
   const allowRotate=els.allowRotate.checked;
   const allowVerticalRotate=els.allowVerticalRotate.checked;
   const wallGap=els.wallGap.checked;
   const type=els.basketType.value;
-  const raster=parseInt(els.raster.value)||0;
+  const raster=parseInt(els.raster.value)||13;
   const divider=parseFloat(els.dividerThick.value)||0;
   const stackCount=Math.min(100, Math.max(1, parseInt(els.stackCount.value)||1));
   const overallH=bH*stackCount;
+
+  // 計算底板實際尺寸（客製化邏輯）
+  // 公式：底板長 = 網格長邊格數 × 13 + 4，底板寬 = 網格寬邊格數 × 13 + 4
+  // 標準 techtray 425×276：28×13+4=368 (不匹配)，所以標準有固定值
+  // 此處若為客製模式則套用公式，否則使用預設值
+  let actualBL = bL, actualBW = bW;
+  if(type !== 'preset-techtray' && type !== 'fries-techtray-425x276'){
+    actualBL = gridSlotsL * 13 + 4;
+    actualBW = gridSlotsW * 13 + 4;
+  }
 
   // 固定格數模式參數
   const useFixedGridMode = els.fixedGridMode.checked;
