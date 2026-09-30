@@ -265,14 +265,22 @@ const els = {
 
 const STORAGE_KEY = 'basketPresets_v2';
 const DEFAULT_PRESETS = [
-  {id:'default-400x300x96', name:'標準籃 400×300×96（自由）', L:400,W:300,H:96, type:'free', raster:0, divider:0},
-  {id:'fries-deckel-600x400x13', name:'FRIES Deckel für Grundkorb 600×400×13', L:600,W:400,H:13, type:'variogrid13', raster:13, divider:3},
-  {id:'fries-variogrid-600x400x13', name:'FRIES variogrid Grundplatte 600×400×13 (13mm)', L:600,W:400,H:13, type:'variogrid13', raster:13, divider:3},
-  {id:'fries-variogrid-low-600x400x36', name:'FRIES variogrid + Toprahmen niedrig 600×400×36', L:600,W:400,H:36, type:'variogrid13', raster:13, divider:3},
-  {id:'fries-variogrid-high-600x400x63', name:'FRIES variogrid + Toprahmen hoch 600×400×63', L:600,W:400,H:63, type:'variogrid13', raster:13, divider:3},
-  {id:'fries-techrack-600x400x120', name:'FRIES tech-rack 600×400×120 (13mm)', L:600,W:400,H:120, type:'techrack13', raster:13, divider:3},
-  {id:'fries-techtray-425x276', name:'FRIES techtray 425×276 (13mm Schäfer)', L:425,W:276,H:96, type:'variogrid13', raster:13, divider:3},
-  {id:'preset-300x200x100', name:'小籃 300×200×100（自由）', L:300,W:200,H:100, type:'free', raster:0, divider:0},
+  {id:'default-400x300x96', name:'標準籃 400×300×96（自由）', type:'free', raster:0, divider:0,
+   basketBottomL:400, basketBottomW:300, basketBottomH:96, columnHeight:96, gridSlotsL:0, gridSlotsW:0},
+  {id:'fries-deckel-600x400x13', name:'FRIES Deckel für Grundkorb 600×400×13', type:'variogrid13', raster:13, divider:3,
+   basketBottomL:600, basketBottomW:400, basketBottomH:13, columnHeight:96, gridSlotsL:0, gridSlotsW:0},
+  {id:'fries-variogrid-600x400x13', name:'FRIES variogrid Grundplatte 600×400×13 (13mm)', type:'variogrid13', raster:13, divider:3,
+   basketBottomL:600, basketBottomW:400, basketBottomH:13, columnHeight:96, gridSlotsL:0, gridSlotsW:0},
+  {id:'fries-variogrid-low-600x400x36', name:'FRIES variogrid + Toprahmen niedrig 600×400×36', type:'variogrid13', raster:13, divider:3,
+   basketBottomL:600, basketBottomW:400, basketBottomH:36, columnHeight:96, gridSlotsL:0, gridSlotsW:0},
+  {id:'fries-variogrid-high-600x400x63', name:'FRIES variogrid + Toprahmen hoch 600×400×63', type:'variogrid13', raster:13, divider:3,
+   basketBottomL:600, basketBottomW:400, basketBottomH:63, columnHeight:96, gridSlotsL:0, gridSlotsW:0},
+  {id:'fries-techrack-600x400x120', name:'FRIES tech-rack 600×400×120 (13mm)', type:'techrack13', raster:13, divider:3,
+   basketBottomL:600, basketBottomW:400, basketBottomH:120, columnHeight:96, gridSlotsL:0, gridSlotsW:0},
+  {id:'fries-techtray-425x276', name:'FRIES techtray 425×276 (13mm Schäfer)', type:'variogrid13', raster:13, divider:3,
+   basketBottomL:425, basketBottomW:276, basketBottomH:13, columnHeight:96, gridSlotsL:28, gridSlotsW:20},
+  {id:'preset-300x200x100', name:'小籃 300×200×100（自由）', type:'free', raster:0, divider:0,
+   basketBottomL:300, basketBottomW:200, basketBottomH:100, columnHeight:96, gridSlotsL:0, gridSlotsW:0},
 ];
 
 function loadPresets(){
@@ -391,17 +399,23 @@ function findPreset(id){ return presets.find(p=>p.id===id); }
 function applyBasketSelect(){
   const p=findPreset(els.basketSelect.value);
   if(!p) return;
-  els.basketL.value=p.L; els.basketW.value=p.W; els.basketH.value=p.H; els.basketName.value=p.name;
-  els.basketType.value=p.type||'free';
-  if(p.raster) els.raster.value=p.raster; else els.raster.value=typeToRaster(p.type);
-  els.dividerThick.value = p.divider ?? (p.type==='free'?0:3);
+  // 設定新式尺寸欄位 (優先使用新欄位，若無則使用舊欄位做為備用)
+  els.basketBottomL.value = p.basketBottomL !== undefined ? p.basketBottomL : (p.L || 400);
+  els.basketBottomW.value = p.basketBottomW !== undefined ? p.basketBottomW : (p.W || 300);
+  els.basketBottomH.value = p.basketBottomH !== undefined ? p.basketBottomH : (p.H || 13);
+  els.columnHeight.value = p.columnHeight !== undefined ? p.columnHeight : (p.columnHeight || 96);
+  els.gridSlotsL.value = p.gridSlotsL !== undefined ? p.gridSlotsL : (p.gridSlotsL || 28);
+  els.gridSlotsW.value = p.gridSlotsW !== undefined ? p.gridSlotsW : (p.gridSlotsW || 20);
+  els.basketType.value = p.type || 'free';
+  if(p.raster) els.raster.value = p.raster; else els.raster.value = typeToRaster(p.type);
+  els.dividerThick.value = p.divider !== undefined ? p.divider : (p.type === 'free' ? 0 : 3);
   syncRasterBox();
   updateHints();
   computeAndRender();
 }
 function saveBasket(){
-  const L=parseInt(els.basketL.value)||0, W=parseInt(els.basketW.value)||0, H=parseInt(els.basketH.value)||0;
-  if(L<=0||W<=0||H<=0){ alert('長寬高需大於 0'); return; }
+  const L=parseInt(els.basketBottomL.value)||0, W=parseInt(els.basketBottomW.value)||0, H=parseInt(els.basketBottomH.value)||0;
+  if(L<=0||W<=0||H<=0){ alert('底板長寬高需大於 0'); return; }
   let name=(els.basketName.value||'').trim();
   if(!name) name = L+'×'+W+'×'+H;
   const type=els.basketType.value;
@@ -412,10 +426,18 @@ function saveBasket(){
   let target = null;
   if(existing && (existing.name===name || confirm('要更新目前選擇的 "'+existing.name+'" 嗎？\n按取消則新增一筆'))){
     target=existing;
-    Object.assign(target,{name,L,W,H,type,raster,divider});
+    Object.assign(target,{name,L,W,H,type,raster,divider,
+      basketBottomL:L, basketBottomW:W, basketBottomH:H,
+      columnHeight:parseInt(els.columnHeight.value),
+      gridSlotsL:parseInt(els.gridSlotsL.value),
+      gridSlotsW:parseInt(els.gridSlotsW.value)});
   } else {
     const newId='custom-'+Date.now();
-    target={id:newId,name,L,W,H,type,raster,divider};
+    target={id:newId,name,L,W,H,type,raster,divider,
+      basketBottomL:L, basketBottomW:W, basketBottomH:H,
+      columnHeight:parseInt(els.columnHeight.value),
+      gridSlotsL:parseInt(els.gridSlotsL.value),
+      gridSlotsW:parseInt(els.gridSlotsW.value)};
     presets.push(target);
   }
   savePresets(); refreshBasketSelect();
