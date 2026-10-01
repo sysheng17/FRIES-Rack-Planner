@@ -155,7 +155,7 @@ main{flex:1;display:flex;min-height:0}
       <div class="row"><label>網格寬邊格數</label><input id="gridSlotsW" type="number" min="1" step="1" value="20"><span style="font-size:12px;color:#6c728a">個</span></div>
 </div>
 
-    <div class="card">
+<div class="card">
       <h3>📦 籃具尺寸</h3>
       <div class="row"><label>底板長</label><input id="basketBottomL" type="number" min="1" step="1" value="425"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="row"><label>底板寬</label><input id="basketBottomW" type="number" min="1" step="1" value="276"><span style="font-size:12px;color:#6c728a">mm</span></div>
@@ -163,6 +163,19 @@ main{flex:1;display:flex;min-height:0}
       <div class="row"><label>柱高</label><input id="columnHeight" type="number" min="1" step="1" value="96"><span style="font-size:12px;color:#6c728a">mm（28/42/69/96 為標準 Teiler 高度）</span></div>
       <div class="row"><label>網格長邊格數</label><input id="gridSlotsL" type="number" min="1" step="1" value="28"><span style="font-size:12px;color:#6c728a">個</span></div>
       <div class="row"><label>網格寬邊格數</label><input id="gridSlotsW" type="number" min="1" step="1" value="20"><span style="font-size:12px;color:#6c728a">個</span></div>
+</div>
+
+<div class="card">
+      <h3>📐 工件尺寸</h3>
+      <div class="row"><label>長 L</label><input id="partL" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>寬 W</label><input id="partW" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>工件與隔板距離</label><input id="gap" type="number" min="0" step="1" value="5"><span style="font-size:12px;color:#6c728a">mm</span></div>
+</div>
+
+<div class="card">
+      <h3>🔧 其他尺寸</h3>
+      <div class="row"><label>隔板厚度</label><input id="dividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:12px;color:#6c728a">mm</span></div>
 </div>
 
     <div class="card" id="resultBox">
@@ -208,7 +221,6 @@ main{flex:1;display:flex;min-height:0}
 // file:// compatible - using global THREE (OrbitControls already global from libs/OrbitControls_umd.js)
 
 const els = {
-  basketSelect: document.getElementById('basketSelect'),
   basketType: document.getElementById('basketType'),
   basketL: document.getElementById('basketL'),
   basketW: document.getElementById('basketW'),
@@ -217,7 +229,6 @@ const els = {
   cornerColumnSize: document.getElementById('cornerColumnSize'),
   overallSize: document.getElementById('overallSize'),
   basketName: document.getElementById('basketName'),
-  basketCountBadge: document.getElementById('basketCountBadge'),
   rasterBox: document.getElementById('rasterBox'),
   raster: document.getElementById('raster'),
   dividerThick: document.getElementById('dividerThick'),
@@ -273,20 +284,7 @@ const DEFAULT_PRESETS = [
    basketBottomL:300, basketBottomW:200, basketBottomH:100, columnHeight:96, gridSlotsL:0, gridSlotsW:0},
 ];
 
-function loadPresets(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw){ const arr=JSON.parse(raw); if(Array.isArray(arr) && arr.length) return arr; }
-    const old = localStorage.getItem('basketPresets_v1');
-    if(old){
-      const arr=JSON.parse(old);
-      return arr.map(p=>({type:'free', raster:0, divider:0, ...p}));
-    }
-  }catch(e){}
-  return JSON.parse(JSON.stringify(DEFAULT_PRESETS));
-}
-let presets = loadPresets();
-function savePresets(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(presets)); }
+
 
 function typeToRaster(type){
   if(type==='variogrid13') return 13;
