@@ -59,7 +59,7 @@ main{flex:1;display:flex;min-height:0}
 <script src="./libs/three.min.js"></script>
 <script src="./libs/OrbitControls_umd.js"></script>
 </head>
-<body>
+<body onload="computeAndRender()">
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
@@ -72,80 +72,7 @@ main{flex:1;display:flex;min-height:0}
 </header>
 <main>
   <div id="panel">
-    <div class="card">
-      <h3>🧺 籃具尺寸 <span class="badge" style="margin-left:auto" id="basketCountBadge"></span></h3>
-      <div class="row">
-        <label>選擇</label>
-        <select id="basketSelect"></select>
-      </div>
-      <div class="row">
-        <label>籃具類型</label>
-        <select id="basketType">
-          <option value="free">自由擺放（無網格限制）</option>
-          <option value="variogrid9">FRIES variogrid / techtray — 9 mm Raster</option>
-          <option value="techrack15">FRIES tech-rack — 15 mm Raster</option>
-        </select>
-      </div>
-      <div class="row">
-        <label>長 L</label><input id="basketL" type="number" min="1" step="1" value="400">
-        <span style="font-size:12px;color:#6c728a">mm</span>
-      </div>
-      <div class="row">
-        <label>寬 W</label><input id="basketW" type="number" min="1" step="1" value="300">
-        <span style="font-size:12px;color:#6c728a">mm</span>
-      </div>
-      <div class="row">
-        <label>高 H</label><input id="basketH" type="number" min="1" step="1" value="96" placeholder="30/50/80/96" list="heightOptions">
-        <span style="font-size:12px;color:#6c728a">mm</span>
-      </div>
-      <datalist id="heightOptions">
-        <option value="13"></option>
-        <option value="28"></option>
-        <option value="30"></option>
-        <option value="36"></option>
-        <option value="42"></option>
-        <option value="50"></option>
-        <option value="63"></option>
-        <option value="69"></option>
-        <option value="80"></option>
-        <option value="96"></option>
-        <option value="100"></option>
-        <option value="120"></option>
-        <option value="150"></option>
-        <option value="200"></option>
-      </datalist>
-<div class="hint" id="heightHint">可選高度: 28/42/69/96 mm（預設最高 96，對應柱高），其他高度請直接輸入</div>
-<div class="hint" style="color:#8ec0ff">所有籃具可選高度：<b>13</b>(Deckel) · <b>28/42/69/96</b>(Teiler/柱子) · <b>30/50/80/96/100</b>(標準) · <b>36/63</b>(Toprahmen) · <b>70-230</b>(tech-rack，mm級客製) — 直接輸入或下拉選擇</div>
-      <div class="row">
-        <label>堆疊數</label><input id="stackCount" type="number" min="1" max="100" step="1" value="1">
-        <span style="font-size:12px;color:#6c728a">層（上限 100）</span>
-      </div>
-      <div class="row">
-        <label>角落柱尺寸</label><input id="cornerColumnSize" type="number" min="0" step="5" value="0"><span style="font-size:12px;color:#6c728a">mm（0=無，四角柱子占用空間，實際可放空間更小）</span>
-      </div>
-      <div class="hint" id="cornerColumnHint" style="display:none">注：角落柱子會減少有效放置區域，計算會自動扣除邊框兩側的柱子寬度。tech-rack custom 400×300 等規格建議開啟固定格數模式以獲得更精確的佈局。</div>
-      <div class="hint" id="overallSize">整體尺寸: 425×276×96 mm（1 層，單層 96mm，柱高 28/42/69/96mm）</div>
-        <div style="font-size:11px;color:#8ec0ff;margin-bottom:6px"><b>Raster 隔板限制</b> — 參考 FRIES 2026 型錄 p.6-10 / p.74</div>
-        <div class="row"><label>Raster</label><input id="raster" type="number" min="1" step="1" value="13"><span style="font-size:11px;color:#6c728a">mm</span></div>
-        <div class="row"><label>隔板厚</label><input id="dividerThick" type="number" min="0" step="0.5" value="3"><span style="font-size:11px;color:#6c728a">mm (Teilerstärke)</span></div>
-<div class="hint" id="dividerHint">預設 3 mm（FRIES Teilerstärke；自由擺放 0 mm）。間距 13mm 為 9mm/15mm Raster 之外的標準間隔。隔板只能架在 13mm 網格位置，每個工件+間隔需向上取整到 13mm 倍數。若啟用「固定格數模式」，隔板將從第2列第2行開始排列（避開角落柱子）。</div>
-      </div>
-      <div class="row">
-        <label>名稱</label><input id="basketName" type="text" placeholder="例如 400x300x96 / FRIES Deckel 600x400x13">
-      </div>
-      <div style="display:flex;gap:8px;margin-top:4px">
-        <button class="btn primary flex" onclick="saveBasket()">新增 / 更新</button>
-        <button class="btn danger" onclick="deleteBasket()">刪除</button>
-        <button class="btn" onclick="applyBasketSelect()">套用</button>
-      </div>
-      <div class="hint">籃具清單可無限擴充，自動儲存於瀏覽器 (localStorage)。已內建 FRIES 規格，參考 <a href="https://www.fries-kt.com/wp-content/uploads/2026_DE_FRIES-Werkstuecktraeger_Prospekt_web.pdf" target="_blank" style="color:#8ec0ff">2026 FRIES 型錄 PDF</a>。</div>
-      <div class="alert" style="margin-top:8px">
-        <b>提示：Deckel für Grundkorb 600×400×13</b><br>
-        型錄 p.22-23 / p.62：此為上蓋/底板（高 13mm），需搭配 variogrid 或 tech-rack 隔板系統使用。工件不能自由擺放，必須對齊 <b>9 mm 或 15 mm 網格</b>。若選此籃具，請將類型設為對應 Raster，程式會自動計算網格取整後的實際容量（通常少於自由擺放理論值）。
-      </div>
-    </div>
 
-<div class="card">
       <h3>📦 籃具尺寸</h3>
       <div class="row"><label>底板長</label><input id="basketBottomL" type="number" min="1" step="1" value="425"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="row"><label>底板寬</label><input id="basketBottomW" type="number" min="1" step="1" value="276"><span style="font-size:12px;color:#6c728a">mm</span></div>
@@ -337,8 +264,75 @@ function updateOverallSize(){
 }
 
 function computeAndRender(){
-
-function refreshBasketSelect(){
+  const bL=parseInt(els.basketBottomL.value)||0, bW=parseInt(els.basketBottomW.value)||0, bH=parseInt(els.basketBottomH.value)||0;
+  const cH=parseInt(els.columnHeight.value)||96;
+  const gS_L=parseInt(els.gridSlotsL.value)||28, gS_W=parseInt(els.gridSlotsW.value)||20;
+  const dT=parseFloat(els.dividerThick.value)||3;
+  const gap=parseInt(els.gap.value)||5;
+  const pL=parseInt(els.partL.value)||39, pW=parseInt(els.partW.value)||39, pH=parseInt(els.partH.value)||39;
+  
+  // 計算有效區域（扣除柱子寬度）
+  const ccs = parseInt(els.cornerColumnSize.value)||0;
+  const wallGap = els.wallGap ? parseInt(els.wallGap.value)||0 : 0;
+  const effL = bL - wallGap*2 - ccs*2;
+  const effW = bW - wallGap*2 - ccs*2;
+  
+  // 格距 13mm，每格寬度 = (13 -隔板厚) / 1 (簡單模式)
+  // 簡單模式：每個格子寬度為 13mm，間距為 gap
+  
+  // 計算工件在格內的放置情況
+  function countInSlot(pl, pw, slotUsableL, slotUsableW){
+    if(slotUsableL < pl || slotUsableW < pw) return 0;
+    let nx = Math.floor((slotUsableL + gap) / (pl + gap));
+    let ny = Math.floor((slotUsableW + gap) / (pw + gap));
+    while(nx>0 && (nx*pl + (nx-1)*gap) > slotUsableL) nx--;
+    while(ny>0 && (ny*pw + (ny-1)*gap) > slotUsableW) ny--;
+    return nx*ny;
+  }
+  
+  // 每個格子的淨尺寸（扣除隔板厚度）
+  const slotUsableL = (effL - (gS_L - 1) * dT) / gS_L;
+  const slotUsableW = (effW - (gS_W - 1) * dT) / gS_W;
+  
+  // 總計工件數量
+  let totalCount = countInSlot(pL, pW, slotUsableL, slotUsableW);
+  
+  // 顯示結果
+  const resultNumEl = els.resultNum;
+  const resultDetailEl = els.resultDetail;
+  const orientationBadgeEl = els.orientationBadge;
+  const rasterBadgeEl = els.rasterBadge;
+  
+  if(resultNumEl && resultDetailEl){
+    if(totalCount > 0){
+      resultNumEl.textContent = totalCount;
+      resultDetailEl.innerHTML = `底板: ${bL}×${bW}mm | 工件: ${pL}×${pW}×${pH}mm | 間距: ${gap}mm | 格數: ${gS_L}×${gS_W} | 隔板: ${dT}mm | 有效區: ${effL.toFixed(1)}×${effW.toFixed(1)}mm`;
+      orientationBadgeEl.textContent = '最佳擺放';
+      orientationBadgeEl.className = 'badge ok';
+    } else {
+      resultNumEl.textContent = 0;
+      resultDetailEl.innerHTML = `無法放置工件：工件尺寸(${pL}×${pW}mm) 超過有效格子尺寸(${slotUsableL.toFixed(1)}×${slotUsableW.toFixed(1)}mm)';
+      orientationBadgeEl.textContent = '超出範圍';
+      orientationBadgeEl.className = 'badge warn';
+    }
+    resultNumEl.parentElement.style.display = 'block';
+  }
+  
+  // 更新顯示
+  if(els.basketCountBadge){
+    els.basketCountBadge.textContent = presets.length + ' 種';
+  }
+  
+  // 簡易 3D 場景更新（如果 Three.js 已載入）
+  if (typeof THREE !== 'undefined' && els.canvas){
+    // 重置相機和場景
+    const scene = els.canvas three; // 簡易處理
+    // 此處可接 Three.js 具體渲染邏輯
+  }
+  
+  // 顯示提示
+  updateHints();
+}
   els.basketSelect.innerHTML='';
   presets.forEach((p)=>{
     const o=document.createElement('option');
