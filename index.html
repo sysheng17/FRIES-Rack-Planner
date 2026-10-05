@@ -12,8 +12,8 @@ header h1{font-size:18px;font-weight:700;letter-spacing:0.5px}
 header .sub{font-size:12px;color:#8b92a8}
 main{flex:1;display:flex;min-height:0}
 @media(max-width:1000px){main{flex-direction:column}}
-#panel{width:400px;min-width:340px;background:#161a26;border-right:1px solid #2a2f45;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
-@media(max-width:1000px){#panel{width:100%;border-right:none;border-bottom:1px solid #2a2f45;max-height:62vh}}
+#panel{width:320px;min-width:280px;background:#161a26;border-right:1px solid #2a2f45;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+@media(max-width:1000px){#panel{width:100%;border-right:none;border-bottom:1px solid #2a2f45;max-height:50vh}}
 .card{background:#1e2335;border:1px solid #2a2f45;border-radius:10px;padding:14px}
 .card h3{font-size:13px;color:#8b92a8;margin-bottom:10px;letter-spacing:0.5px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
 .row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
@@ -38,7 +38,7 @@ main{flex:1;display:flex;min-height:0}
 .kv{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px dashed #2a2f45;color:#aab0c6}
 .kv:last-child{border-bottom:none}
 .kv span:last-child{color:#e6e8ec;font-weight:600}
-  #viewer{flex:1;position:relative;background:radial-gradient(1200px 600px at 50% 20%,#1b2138 0%,#0f1117 60%);overflow:hidden;min-height:320px}
+  #viewer{flex:1;position:relative;background:radial-gradient(1200px 600px at 50% 20%,#1b2138 0%,#0f1117 60%);overflow:hidden;min-height:450px}
 #canvas{width:100%;height:100%;display:block;min-height:320px}
 #errorBox{position:absolute;left:12px;top:60px;right:12px;background:#3a1a1a;border:1px solid #5c2b2b;color:#ffb0b0;padding:10px;border-radius:8px;font-size:12px;display:none;z-index:10;white-space:pre-wrap}
 #overlay{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -59,7 +59,7 @@ main{flex:1;display:flex;min-height:0}
 <script src="./libs/three.min.js"></script>
 <script src="./libs/OrbitControls_umd.js"></script>
 </head>
-<body onload="computeAndRender()">
+<body onload="initThree(); computeAndRender()">
 <header>
   <h1>籃具工件擺放計算</h1>
   <span class="sub">最佳擺放展示 · 最大數量計算 · 3D 拖曳旋轉</span>
@@ -83,22 +83,16 @@ main{flex:1;display:flex;min-height:0}
 </div>
 
 <div class="card">
-      <h3>📦 籃具尺寸</h3>
-      <div class="row"><label>底板長</label><input id="basketBottomL" type="number" min="1" step="1" value="425"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>底板寬</label><input id="basketBottomW" type="number" min="1" step="1" value="276"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>底板高</label><input id="basketBottomH" type="number" min="1" step="1" value="13"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>柱高</label><input id="columnHeight" type="number" min="1" step="1" value="96"><span style="font-size:12px;color:#6c728a">mm（28/42/69/96 為標準 Teiler 高度）</span></div>
-      <div class="row"><label>網格長邊格數</label><input id="gridSlotsL" type="number" min="1" step="1" value="28"><span style="font-size:12px;color:#6c728a">個</span></div>
-      <div class="row"><label>網格寬邊格數</label><input id="gridSlotsW" type="number" min="1" step="1" value="20"><span style="font-size:12px;color:#6c728a">個</span></div>
-</div>
-
-<div class="card">
-      <h3>📐 工件尺寸</h3>
-      <div class="row"><label>長 L</label><input id="partL" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>寬 W</label><input id="partW" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
-      <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="0.1" value="39"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <h3>📐 工件尺寸（不可堆疊）</h3>
+      <div class="row"><label>長 L</label><input id="partL" type="number" min="1" step="1" value="15"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>寬 W</label><input id="partW" type="number" min="1" step="1" value="15"><span style="font-size:12px;color:#6c728a">mm</span></div>
+      <div class="row"><label>高 H</label><input id="partH" type="number" min="1" step="1" value="15"><span style="font-size:12px;color:#6c728a">mm</span></div>
       <div class="row"><label>工件與隔板距離</label><input id="gap" type="number" min="0" step="1" value="5"><span style="font-size:12px;color:#6c728a">mm</span></div>
-</div>
+      <div class="checkRow"><input type="checkbox" id="allowRotate" checked><label for="allowRotate">允許旋轉 90°</label></div>
+      <div class="checkRow"><input type="checkbox" id="allowVerticalRotate"><label for="allowVerticalRotate">允許垂直旋轉</label></div>
+      <div class="checkRow"><input type="checkbox" id="wallGap" checked><label for="wallGap">啟用壁間距</label></div>
+      <div class="checkRow"><input type="checkbox" id="boardExtend" checked><label for="boardExtend">啟用底板延伸</label></div>
+    </div>
 
 <div class="card">
       <h3>🔧 其他尺寸</h3>
@@ -264,38 +258,57 @@ function updateOverallSize(){
 }
 
 function computeAndRender(){
-  const bL=parseInt(els.basketBottomL.value)||0, bW=parseInt(els.basketBottomW.value)||0, bH=parseInt(els.basketBottomH.value)||0;
-  const cH=parseInt(els.columnHeight.value)||96;
-  const gS_L=parseInt(els.gridSlotsL.value)||28, gS_W=parseInt(els.gridSlotsW.value)||20;
-  const dT=parseFloat(els.dividerThick.value)||3;
-  const gap=parseInt(els.gap.value)||5;
-  const pL=parseInt(els.partL.value)||39, pW=parseInt(els.partW.value)||39, pH=parseInt(els.partH.value)||39;
+  // 1. 讀取使用者輸入的格數
+  const gS_L = parseInt(els.gridSlotsL.value) || 28;
+  const gS_W = parseInt(els.gridSlotsW.value) || 20;
   
-  // 計算有效區域（扣除柱子寬度）
-  const ccs = parseInt(els.cornerColumnSize.value)||0;
-  const wallGap = els.wallGap ? parseInt(els.wallGap.value)||0 : 0;
-  const effL = bL - wallGap*2 - ccs*2;
-  const effW = bW - wallGap*2 - ccs*2;
+  // 2. 固定規格參數
+  const SLOT_WIDTH = 13;   // 固定格子寬 13mm
+  const DIVIDER_THICK = 3; // 固定隔板厚 3mm
+  const MARGIN = 0.5;      // 固定外邊邊距 0.5mm
   
-  // 格距 13mm，每格寬度 = (13 -隔板厚) / 1 (簡單模式)
-  // 簡單模式：每個格子寬度為 13mm，間距為 gap
+  // 3. 由格子參數計算有效區域
+  // 公式: effL = 1mm(外) + gS_L×13mm + (gS_L-1)×3mm(隔板厚)
+  const effL = 1 + (gS_L * SLOT_WIDTH) + (gS_L - 1) * DIVIDER_THICK;
+  const effW = 1 + (gS_W * SLOT_WIDTH) + (gS_W - 1) * DIVIDER_THICK;
   
-  // 計算工件在格內的放置情況
-  function countInSlot(pl, pw, slotUsableL, slotUsableW){
-    if(slotUsableL < pl || slotUsableW < pw) return 0;
-    let nx = Math.floor((slotUsableL + gap) / (pl + gap));
-    let ny = Math.floor((slotUsableW + gap) / (pw + gap));
-    while(nx>0 && (nx*pl + (nx-1)*gap) > slotUsableL) nx--;
-    while(ny>0 && (ny*pw + (ny-1)*gap) > slotUsableW) ny--;
-    return nx*ny;
-  }
+// 1. 計算幾何最小尺寸 (如果關閉時的尺寸)
+const minBottomL = gS_L * SLOT_WIDTH + 4;
+const minBottomW = gS_W * SLOT_WIDTH + 4;
+
+// 2. 根據開關決定顯示尺寸
+// 開啟: 顯示使用者輸入的傳統底板尺寸
+// 關閉: 顯示由格子參數計算出來的幾何尺寸
+const boardExtend = els.boardExtend ? els.boardExtend.checked : true;
+const bottomL = boardExtend ? bL : minBottomL;
+const bottomW = boardExtend ? bW : minBottomW;
+
+// 3. 防呆檢查: 開啟時確保尺寸 >= 關閉時的幾何尺寸
+let extendWarning = '';
+if (boardExtend) {
+    if (bL < minBottomL) extendWarning = `長度過小 (${bL}mm < ${minBottomL}mm), `;
+    if (bW < minBottomW) extendWarning += `寬度過小 (${bW}mm < ${minBottomW}mm)`;
+}
   
-  // 每個格子的淨尺寸（扣除隔板厚度）
-  const slotUsableL = (effL - (gS_L - 1) * dT) / gS_L;
-  const slotUsableW = (effW - (gS_W - 1) * dT) / gS_W;
+  // 5. 格子可用尺寸 (固定 13mm)
+  const slotUsableL = SLOT_WIDTH; // 13mm
+  const slotUsableW = SLOT_WIDTH; // 13mm
   
-  // 總計工件數量
-  let totalCount = countInSlot(pL, pW, slotUsableL, slotUsableW);
+  // 6. 讀取工件尺寸 (預設 15×15×15)
+  const pL = parseInt(els.partL.value) || 15;
+  const pW = parseInt(els.partW.value) || 15;
+  const pH = parseInt(els.partH.value) || 15;
+  const gap = parseInt(els.gap.value) || 5;
+  
+  // 7. 讀取底板實際尺寸 (用於顯示結果，不影響格子計算)
+  const bL = parseInt(els.basketBottomL.value) || 425;
+  const bW = parseInt(els.basketBottomW.value) || 276;
+  const bH = parseInt(els.basketBottomH.value) || 13;
+  const cH = parseInt(els.columnHeight.value) || 96;
+  
+  // 8. 讀取角落柱子尺寸
+  const ccs = parseInt(els.cornerColumnSize.value) || 0;
+  const wallGap = els.wallGap ? parseInt(els.wallGap.value) || 0 : 0;
   
   // 顯示結果
   const resultNumEl = els.resultNum;
@@ -306,7 +319,8 @@ function computeAndRender(){
   if(resultNumEl && resultDetailEl){
     if(totalCount > 0){
       resultNumEl.textContent = totalCount;
-      resultDetailEl.innerHTML = `底板: ${bL}×${bW}mm | 工件: ${pL}×${pW}×${pH}mm | 間距: ${gap}mm | 格數: ${gS_L}×${gS_W} | 隔板: ${dT}mm | 有效區: ${effL.toFixed(1)}×${effW.toFixed(1)}mm`;
+      const boardExtendStr = boardExtend ? ' (含延伸)' : ' (幾何計算)';
+      resultDetailEl.innerHTML = `底板: ${bottomL.toFixed(1)}×${bottomW.toFixed(1)}mm${boardExtendStr} | 工件: ${pL}×${pW}×${pH}mm | 間距: ${gap}mm | 格數: ${gS_L}×${gS_W} | 隔板: ${DIVIDER_THICK}mm | 有效區: ${effL.toFixed(1)}×${effW.toFixed(1)}mm`;
       orientationBadgeEl.textContent = '最佳擺放';
       orientationBadgeEl.className = 'badge ok';
     } else {
@@ -323,25 +337,55 @@ function computeAndRender(){
     els.basketCountBadge.textContent = presets.length + ' 種';
   }
   
-  // 簡易 3D 場景更新（如果 Three.js 已載入）
+  // 3D 場景初始化與更新（如果 Three.js 已載入）
   if (typeof THREE !== 'undefined' && els.canvas){
-    // 重置相機和場景
-    const scene = els.canvas three; // 簡易處理
-    // 此處可接 Three.js 具體渲染邏輯
+    // 獲取 canvas 上下文或建立 Three.js 場景
+    let ctx = els.canvas.getContext('webgl') || els.canvas.getContext('webgl2');
+    if (!ctx){
+      // 如果 WebGL 不支援，顯示提示
+      if(els.resultDetailEl){ els.resultDetailEl.innerHTML += '<br><span class="hint">WebGL 不可用，3D 模型將無法顯示</span>'; }
+      return;
+    }
+    
+    // 建立 Three.js 基本元件
+    const renderer = new THREE.WebGLRenderer({ canvas: els.canvas, antialias: true });
+    renderer.setSize(els.clientWidth || 800, els.clientHeight || 600);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0f1117);
+    
+    const camera = new THREE.PerspectiveCamera(45, (els.clientWidth || 800) / (els.clientHeight || 600), 0.1, 1000);
+    camera.position.set(0, 20, 30);
+    camera.lookAt(0, 0, 0);
+    
+    // 添加軌道控制
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    
+    // 添加基本光源
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(10, 20, 10);
+    scene.add(dirLight);
+    
+    // 添加座標軸輔助
+    const axesHelper = new THREE.AxesHelper(10);
+    scene.add(axesHelper);
+    
+    // 添加渲染循環
+    function animate(){
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
   }
   
   // 顯示提示
   updateHints();
-}
-  els.basketSelect.innerHTML='';
-  presets.forEach((p)=>{
-    const o=document.createElement('option');
-    o.value=p.id;
-    const tag = p.type==='free' ? '自由' : (p.raster||typeToRaster(p.type))+'mm Raster';
-    o.textContent=p.name + ' ('+p.L+'×'+p.W+'×'+p.H+' · '+tag+')';
-    els.basketSelect.appendChild(o);
-  });
-  els.basketCountBadge.textContent = presets.length + ' 種';
 }
 function findPreset(id){ return presets.find(p=>p.id===id); }
 function applyBasketSelect(){
@@ -433,7 +477,7 @@ function calcSlotMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRot
   const slotUsableW = (effW - (slotsW - 1) * thick) / slotsW;
 
   if(slotUsableL <= 0 || slotUsableW <= 0){
-    return {count:0, isSlotMode:true, reason:`格數過多導致每格淨尺寸 ≤ 0（格長 ${slotUsableL.toFixed(1)} × 格寬 ${slotUsableW.toFixed(1)}），請減少格數或縮小隔板厚度`};
+    return {count:0, isSlotMode:true, reason:"Slot size too small (slotL " + slotUsableL.toFixed(1) + " × slotW " + slotUsableW.toFixed(1) + ", reduce slots or decrease divider thickness)"};
   }
 
   // 在單格內計算最多能放幾個工件（自由擺放邏輯，含間隔）
@@ -467,7 +511,7 @@ function calcSlotMode(bL, bW, bH, pL, pW, pH, gap, allowRotate, allowVerticalRot
 
   const valid = candidates.filter(c => c !== null);
   if(valid.length === 0){
-    return {count:0, isSlotMode:true, reason:`工件無法放入單格（格淨尺寸 ${slotUsableL.toFixed(1)}×${slotUsableW.toFixed(1)} mm），請嘗試旋轉或減小工件/間隔`};
+    return {count:0, isSlotMode:true, reason:"工件無法放入單格（格淨尺寸 " + slotUsableL.toFixed(1) + "×" + slotUsableW.toFixed(1) + " mm），請嘗試旋轉或減小工件/間隔"};
   }
 
   // 擇優：總數量最多
