@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 智慧籃具工件裝箱與隔板總成計算器 (均勻間隙統一版)</title>
+    <title>3D 智慧籃具工件裝箱與隔板總成計算器 (自訂預設值版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -35,7 +35,7 @@
                 </div>
                 <div>
                     <h1 class="text-lg font-bold text-slate-900">智慧籃具工件裝箱與隔板總成計算器</h1>
-                    <p class="text-xs text-slate-500">3D 智慧籃具與工件最佳排布模擬（均勻間隙統一版）</p>
+                    <p class="text-xs text-slate-500">3D 智慧籃具與工件最佳排布模擬（自訂預設值版）</p>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
@@ -163,7 +163,7 @@
                 <div id="gridConfigContainer" class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">長向格數 (X)</label>
-                        <input type="number" id="gridCountL" value="20" min="1" step="1" oninput="AppController.calculateFromGrid()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <input type="number" id="gridCountL" value="29" min="1" step="1" oninput="AppController.calculateFromGrid()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">長向間距</label>
@@ -171,7 +171,7 @@
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">寬向格數 (Z)</label>
-                        <input type="number" id="gridCountW" value="13" min="1" step="1" oninput="AppController.calculateFromGrid()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <input type="number" id="gridCountW" value="21" min="1" step="1" oninput="AppController.calculateFromGrid()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">寬向間距</label>
@@ -185,14 +185,14 @@
                             <span>容納長 (L) [X]</span>
                             <span class="text-[10px] text-emerald-600 font-bold">自動連動</span>
                         </label>
-                        <input type="number" id="binL" value="260" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-600 cursor-not-allowed font-bold">
+                        <input type="number" id="binL" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-600 cursor-not-allowed font-bold">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">
                             <span>容納寬 (W) [Z]</span>
                             <span class="text-[10px] text-emerald-600 font-bold">自動連動</span>
                         </label>
-                        <input type="number" id="binW" value="169" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-600 cursor-not-allowed font-bold">
+                        <input type="number" id="binW" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-600 cursor-not-allowed font-bold">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">容納高 (H) [Y]</label>
@@ -216,22 +216,22 @@
                             <span>📐</span> 塑膠籃具外框與結構參數
                         </h3>
                         <div class="flex items-center space-x-1">
-                            <button type="button" onclick="AppController.setBinOuterDefaults(2, 2)" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] font-medium transition shadow-sm" title="長寬單邊各加厚 2mm">(2, 2)</button>
-                            <button type="button" onclick="AppController.setBinOuterDefaults(30.5, 8)" class="px-2.5 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-[10px] font-medium transition shadow-sm" title="長邊單邊加厚30.5, 寬邊單邊加厚8mm">(30.5, 8)</button>
+                            <button type="button" onclick="AppController.setBinOuterDefaults(2, 2)" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] font-medium transition shadow-sm" title="長寬單邊各加厚 2mm">客製(2,2)</button>
+                            <button type="button" onclick="AppController.setBinOuterDefaults(24, 1.5)" class="px-2.5 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-[10px] font-medium transition shadow-sm" title="長邊單邊加厚24, 寬邊單邊加厚1.5mm">425x276(24,1.5)</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-600 mb-1">長邊單邊加厚 (X軸)</label>
                             <div class="relative">
-                                <input type="number" id="binWallMarginL" value="30.5" min="0" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <input type="number" id="binWallMarginL" value="24" min="0" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                                 <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
                             </div>
                         </div>
                         <div>
                             <label class="block text-[11px] font-semibold text-slate-600 mb-1">寬邊單邊加厚 (Z軸)</label>
                             <div class="relative">
-                                <input type="number" id="binWallMarginW" value="8" min="0" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <input type="number" id="binWallMarginW" value="1.5" min="0" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                                 <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
                             </div>
                         </div>
@@ -912,7 +912,6 @@
                                             mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), theta);
                                         }
 
-                                        // 🌟 無隔板時：工件間距與牆面間距皆統一為 sGap
                                         const posX = (innerMinX + sGap) - (bbox.minX * scale) + gx * (bestRes.spanL * scale + sGap);
                                         const posZ = (innerMinZ + sGap) - (bbox.minY * scale) + gy * (bestRes.spanW * scale + sGap);
                                         const posY = innerBottomY + sItemH / 2 + z * sItemH;
@@ -1037,13 +1036,13 @@
                 document.getElementById('enablePartitions').checked = false;
                 document.getElementById('baseGridPitch').value = '13';
                 document.getElementById('partitionThickness').value = '3';
-                document.getElementById('gridCountL').value = '20';
+                document.getElementById('gridCountL').value = '29';
                 document.getElementById('gridPitchL').value = '13';
-                document.getElementById('gridCountW').value = '13';
+                document.getElementById('gridCountW').value = '21';
                 document.getElementById('gridPitchW').value = '13';
                 document.getElementById('binH').value = '96';
-                document.getElementById('binWallMarginL').value = '30.5';
-                document.getElementById('binWallMarginW').value = '8';
+                document.getElementById('binWallMarginL').value = '24';
+                document.getElementById('binWallMarginW').value = '1.5';
                 document.getElementById('binBottomThickness').value = '13';
                 document.getElementById('bottomRibThickness').value = '3';
                 document.getElementById('autoStackInStainless').checked = true;
@@ -1215,8 +1214,8 @@
                 const bottomThickness = parseFloat(document.getElementById('binBottomThickness').value) || 0;
                 const bottomRibThick = parseFloat(document.getElementById('bottomRibThickness').value) || 3;
 
-                const gridCountL = parseInt(document.getElementById('gridCountL').value) || 20;
-                const gridCountW = parseInt(document.getElementById('gridCountW').value) || 13;
+                const gridCountL = parseInt(document.getElementById('gridCountL').value) || 29;
+                const gridCountW = parseInt(document.getElementById('gridCountW').value) || 21;
                 const gridPitchL = parseFloat(document.getElementById('gridPitchL').value) || 13;
                 const gridPitchW = parseFloat(document.getElementById('gridPitchW').value) || 13;
 
