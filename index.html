@@ -1,15 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="dark">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧籃具工件裝箱與隔板總成計算器</title>
+    <title>3D 智慧籃具工件裝箱與隔板總成計算器 (均勻間隙統一版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -26,40 +25,40 @@
         }
     </script>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col transition-colors duration-200" id="appBody">
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
 
-    <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-50 shadow-sm transition-colors duration-200" id="mainHeader">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <div class="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-md">
                     📦
                 </div>
                 <div>
-                    <h1 class="text-lg font-bold text-slate-100 transition-colors duration-200" id="headerTitle">智慧籃具工件裝箱與隔板總成計算器</h1>
-                    <p class="text-xs text-slate-400 transition-colors duration-200" id="headerSub">支援塑膠籃隔板排布、工件間隙與外框總成容納計算</p>
+                    <h1 class="text-lg font-bold text-slate-900">智慧籃具工件裝箱與隔板總成計算器</h1>
+                    <p class="text-xs text-slate-500">3D 智慧籃具與工件最佳排布模擬（均勻間隙統一版）</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-3">
-                <button onclick="toggleTheme()" class="px-3.5 py-1.5 text-sm font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700 flex items-center gap-1.5 shadow-sm" id="themeToggleBtn">
-                    <span id="themeIcon">☀️</span> <span id="themeText">切換 Light 模式</span>
-                </button>
-                <button onclick="resetForm()" class="px-3 py-1.5 text-sm font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700 shadow-sm" id="resetBtn">重設預設值</button>
+            <div class="flex items-center space-x-2">
+                <button onclick="AppController.exportReport()" class="px-3 py-1.5 text-sm font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition border border-emerald-200">匯出計算報告</button>
+                <button onclick="AppController.resetForm()" class="px-3 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-lg transition">重設預設值</button>
             </div>
         </div>
     </header>
 
+    <div id="fileProtocolWarning" class="hidden bg-amber-50 border-b border-amber-200 text-amber-800 px-4 py-2 text-xs text-center">
+        ⚠️ 偵測到您正在使用 <code class="bg-amber-100 px-1 py-0.5 rounded">file://</code> 協議開啟檔案。建議透過本地簡易伺服器執行以獲得最佳體驗。
+    </div>
+
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <!-- Left Panel: Input Controls & Results -->
         <div class="lg:col-span-5 space-y-6">
             
-            <!-- Unit & Gap Card -->
-            <div class="bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-800 space-y-4 transition-colors duration-200" id="cardUnit">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-base font-bold text-slate-100 flex items-center gap-2" id="titleUnit">
-                        <span>⚙️</span> 單位與排布設定
+                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>⚙️</span> 單位與排布基礎設定
                     </h2>
-                    <select id="unit" onchange="calculate()" class="bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2">
+                    <select id="unit" onchange="AppController.triggerRecalculate()" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2">
                         <option value="mm" selected>毫米 (mm)</option>
                         <option value="cm">公分 (cm)</option>
                         <option value="inch">英寸 (inch)</option>
@@ -67,338 +66,330 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblGap">工件間隙 / 邊界安全距 (Gap)</label>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">工件間隙 / 邊界安全距 (Gap)</label>
                     <div class="relative">
-                        <input type="number" id="gapSize" value="1" min="0" step="0.1" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <input type="number" id="gapSize" value="1" min="0" step="0.1" oninput="AppController.triggerRecalculate()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         <span id="unitLabelGap" class="absolute right-3 top-2 text-xs text-slate-400">mm</span>
                     </div>
                 </div>
 
-                <!-- Diagonal / Rotation Toggle Card -->
-                <div class="border-t border-slate-800 pt-3 space-y-3 transition-colors duration-200" id="rotationDivider">
+                <div class="border-t border-slate-100 pt-3 space-y-3">
                     <div class="flex items-center justify-between">
                         <div>
-                            <label for="enableRotation" class="text-sm font-bold text-slate-100 cursor-pointer" id="lblRotation">考慮斜放 / 旋轉角度</label>
-                            <p class="text-[11px] text-slate-400" id="subRotation">允許工件在 XY 平面旋轉以提升填充密度</p>
+                            <label for="enableRotation" class="text-sm font-bold text-slate-900 cursor-pointer">啟用任意角度旋轉 (Arbitrary Yaw Rotation)</label>
+                            <p class="text-[11px] text-slate-500">未啟用時僅執行 6 種正交翻轉姿態</p>
                         </div>
                         <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="enableRotation" checked onchange="toggleRotationOptions(); calculate();" class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            <input type="checkbox" id="enableRotation" onchange="AppController.onRotationCheckboxChange(); AppController.triggerRecalculate();" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                         </label>
                     </div>
 
-                    <div id="rotationSettingsContainer" class="space-y-3 bg-slate-950/50 p-3 rounded-xl border border-slate-800 transition-colors duration-200">
+                    <div id="rotationSettingsContainer" class="space-y-3 bg-slate-50 p-3 rounded-xl border border-slate-200 hidden">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblRotMode">旋轉角度模式</label>
-                            <select id="rotationMode" onchange="toggleRotationMode(); calculate();" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded-lg p-2">
-                                <option value="auto">自動搜尋最佳角度 (0° ~ 90°)</option>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">旋轉角度模式</label>
+                            <select id="rotationMode" onchange="AppController.toggleRotationMode(); AppController.triggerRecalculate();" class="w-full bg-white border border-slate-300 text-slate-900 text-xs rounded-lg p-2">
+                                <option value="auto">智慧優化搜尋最佳角度 (0° ~ 90°, 2°精細步幅)</option>
                                 <option value="fixed">指定單一角度</option>
                             </select>
                         </div>
                         <div id="fixedAngleWrapper" class="hidden">
-                            <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblFixedAngle">旋轉角度 (°)</label>
-                            <input type="number" id="fixedAngle" value="45" min="0" max="90" step="1" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">旋轉角度 (°)</label>
+                            <input type="number" id="fixedAngle" value="45" min="0" max="90" step="1" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Single Workpiece Card -->
-            <div class="bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-800 space-y-4 transition-colors duration-200" id="cardPart">
-                <h2 class="text-base font-bold text-slate-100 flex items-center gap-2" id="titlePart">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
                     <span>🧊</span> 單個工件尺寸 (Workpiece)
                 </h2>
                 <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblPartL">長 (L)</label>
-                        <input type="number" id="partL" value="24" min="0.1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">長 (L) → X軸</label>
+                        <input type="number" id="partL" value="133" min="0.1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblPartW">寬 (W)</label>
-                        <input type="number" id="partW" value="24" min="0.1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">寬 (W) → Z軸</label>
+                        <input type="number" id="partW" value="95" min="0.1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblPartH">高 (H)</label>
-                        <input type="number" id="partH" value="25.5" min="0.1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">高 (H) → Y軸</label>
+                        <input type="number" id="partH" value="23.5" min="0.1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                 </div>
             </div>
 
-            <!-- Plastic Basket & Partition Config Card -->
-            <div class="bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-800 space-y-4 transition-colors duration-200" id="cardBin">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-base font-bold text-slate-100 flex items-center gap-2" id="titleBin">
-                        <span>🧱</span> 容納空間與隔板設定 (塑膠籃具)
+                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>🧱</span> 容納空間與硬體網格設定
                     </h2>
-                    <span class="text-xs bg-emerald-950 text-emerald-400 font-medium px-2 py-1 rounded-md border border-emerald-800" id="badgeMultiplier">支援 13mm 倍數間距</span>
+                    <span class="text-xs bg-emerald-50 text-emerald-700 font-medium px-2 py-1 rounded-md border border-emerald-200">硬體格數同步</span>
                 </div>
 
-                <!-- Partition Settings -->
-                <div class="bg-amber-950/40 p-3 rounded-xl border border-amber-900/60 space-y-3 transition-colors duration-200" id="partitionCardBox">
+                <div class="bg-amber-50/70 p-3 rounded-xl border border-amber-200/70 space-y-3">
                     <div class="flex items-center justify-between">
-                        <label for="enablePartitions" class="text-xs font-bold text-amber-200 cursor-pointer flex items-center gap-1.5" id="lblEnablePartitions">
-                            <span>🔲</span> 啟用容納空間內隔板（插於底板網格槽中）
+                        <label for="enablePartitions" class="text-xs font-bold text-amber-900 cursor-pointer flex items-center gap-1.5">
+                            <span>🔲</span> 啟用內部交錯隔板
                         </label>
                         <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="enablePartitions" checked onchange="togglePartitionOptions(); calculate();" class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                            <input type="checkbox" id="enablePartitions" onchange="AppController.onPartitionCheckboxChange(); AppController.triggerRecalculate();" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
                         </label>
                     </div>
 
-                    <div id="partitionSettingsSub" class="space-y-3">
+                    <div id="partitionSettingsSub" class="space-y-3 hidden">
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblPartitionThick">隔板厚度 (預設3mm)</label>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">網格間距基數 (mm)</label>
                                 <div class="relative">
-                                    <input type="number" id="partitionThickness" value="3" min="0.5" step="0.5" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none">
+                                    <input type="number" id="baseGridPitch" value="13" min="1" step="0.5" oninput="AppController.onBasePitchChange(); AppController.triggerRecalculate();" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-800 focus:ring-2 focus:ring-amber-500 focus:outline-none">
                                     <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
                                 </div>
                             </div>
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblPitchMult">網格間距基數 (13mm倍數)</label>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">隔板厚度</label>
                                 <div class="relative">
-                                    <input type="number" id="partitionPitchMultiplier" value="13" min="1" step="1" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none" title="網格間距為13的倍數">
+                                    <input type="number" id="partitionThickness" value="3" min="0.5" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                                     <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
                                 </div>
                             </div>
                         </div>
-                        <div class="text-[11px] text-amber-300/90 bg-amber-900/30 p-2 rounded-lg space-y-1 border border-amber-900/50" id="partitionNotice">
-                            <div>💡 <b>防干涉隔板排布說明：</b></div>
-                            <div>• 每個工件周圍具備專屬無干涉隔間（四周壁厚 + 間隙）。</div>
-                            <div>• <b>當啟用容納空間內隔板時，工件不可在高度方向堆疊 (Z軸 = 1層)</b>。</div>
-                        </div>
                     </div>
                 </div>
 
-                <!-- Grid Configuration Sub-section -->
-                <div class="grid grid-cols-2 gap-3 bg-slate-950/50 p-3 rounded-xl border border-slate-800 transition-colors duration-200" id="gridConfigBox">
+                <div id="gridConfigContainer" class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblGridCountL">長向格數</label>
-                        <input type="number" id="gridCountL" value="28" min="1" step="1" oninput="calculateFromGrid()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">長向格數 (X)</label>
+                        <input type="number" id="gridCountL" value="20" min="1" step="1" oninput="AppController.calculateFromGrid()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblGridPitchL">長向間距 (13倍數)</label>
-                        <input type="number" id="gridPitchL" value="13" min="13" step="13" oninput="calculateFromGrid()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">長向間距</label>
+                        <input type="number" id="gridPitchL" value="13" min="1" step="any" oninput="AppController.calculateFromGrid()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblGridCountW">寬向格數</label>
-                        <input type="number" id="gridCountW" value="20" min="1" step="1" oninput="calculateFromGrid()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">寬向格數 (Z)</label>
+                        <input type="number" id="gridCountW" value="13" min="1" step="1" oninput="AppController.calculateFromGrid()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblGridPitchW">寬向間距 (13倍數)</label>
-                        <input type="number" id="gridPitchW" value="13" min="13" step="13" oninput="calculateFromGrid()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    </div>
-                </div>
-
-                <!-- Bin Dimensions Inputs -->
-                <div class="grid grid-cols-3 gap-3 pt-1">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblBinL">容納長 (L)</label>
-                        <input type="number" id="binL" value="364" min="0.1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblBinW">容納寬 (W)</label>
-                        <input type="number" id="binW" value="260" min="0.1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1" id="lblBinH">容納高 (H)</label>
-                        <input type="number" id="binH" value="96" min="0.1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">寬向間距</label>
+                        <input type="number" id="gridPitchW" value="13" min="1" step="any" oninput="AppController.calculateFromGrid()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                     </div>
                 </div>
 
-                <!-- Quick Select Inner Height Buttons -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">
+                            <span>容納長 (L) [X]</span>
+                            <span class="text-[10px] text-emerald-600 font-bold">自動連動</span>
+                        </label>
+                        <input type="number" id="binL" value="260" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-600 cursor-not-allowed font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 flex items-center justify-between">
+                            <span>容納寬 (W) [Z]</span>
+                            <span class="text-[10px] text-emerald-600 font-bold">自動連動</span>
+                        </label>
+                        <input type="number" id="binW" value="169" readonly class="w-full bg-slate-100 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-600 cursor-not-allowed font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">容納高 (H) [Y]</label>
+                        <input type="number" id="binH" value="96" min="0.1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                </div>
+
                 <div>
-                    <label class="block text-[11px] font-semibold text-slate-400 mb-1.5" id="lblQuickHeight">快速選用標準容納高 (mm)</label>
+                    <label class="block text-[11px] font-semibold text-slate-500 mb-1.5">快速選用標準容納高 (mm)</label>
                     <div class="grid grid-cols-4 gap-2">
-                        <button type="button" onclick="setBinHeight(28)" class="px-2 py-1.5 bg-slate-800 hover:bg-emerald-950 hover:text-emerald-300 hover:border-emerald-700 border border-slate-700 text-slate-200 rounded-lg text-xs font-medium transition quick-btn">28 mm</button>
-                        <button type="button" onclick="setBinHeight(42)" class="px-2 py-1.5 bg-slate-800 hover:bg-emerald-950 hover:text-emerald-300 hover:border-emerald-700 border border-slate-700 text-slate-200 rounded-lg text-xs font-medium transition quick-btn">42 mm</button>
-                        <button type="button" onclick="setBinHeight(69)" class="px-2 py-1.5 bg-slate-800 hover:bg-emerald-950 hover:text-emerald-300 hover:border-emerald-700 border border-slate-700 text-slate-200 rounded-lg text-xs font-medium transition quick-btn">69 mm</button>
-                        <button type="button" onclick="setBinHeight(96)" class="px-2 py-1.5 bg-slate-800 hover:bg-emerald-950 hover:text-emerald-300 hover:border-emerald-700 border border-slate-700 text-slate-200 rounded-lg text-xs font-medium transition quick-btn">96 mm</button>
+                        <button type="button" onclick="AppController.setBinHeight(28)" class="px-2 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-medium transition">28 mm</button>
+                        <button type="button" onclick="AppController.setBinHeight(42)" class="px-2 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-medium transition">42 mm</button>
+                        <button type="button" onclick="AppController.setBinHeight(69)" class="px-2 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-medium transition">69 mm</button>
+                        <button type="button" onclick="AppController.setBinHeight(96)" class="px-2 py-1.5 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 border border-slate-200 rounded-lg text-xs font-medium transition">96 mm</button>
                     </div>
                 </div>
 
-                <!-- Plastic Bin Outer Specs Configuration -->
-                <div class="bg-teal-950/40 p-3 rounded-xl border border-teal-900/60 space-y-3 transition-colors duration-200" id="plasticOuterBox">
+                <div class="bg-teal-50/60 p-3 rounded-xl border border-teal-200 space-y-3">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-xs font-bold text-teal-200 flex items-center gap-1.5" id="titlePlasticOuter">
+                        <h3 class="text-xs font-bold text-teal-900 flex items-center gap-1.5">
                             <span>📐</span> 塑膠籃具外框與結構參數
                         </h3>
                         <div class="flex items-center space-x-1">
-                            <button type="button" onclick="setBinOuterDefaults(2, 2)" class="px-2.5 py-1 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-[10px] font-medium transition shadow-sm" title="長寬單邊各加厚 2mm">
-                                (2, 2)
-                            </button>
-                            <button type="button" onclick="setBinOuterDefaults(30.5, 8)" class="px-2.5 py-1 bg-teal-800 hover:bg-teal-700 text-white rounded-lg text-[10px] font-medium transition shadow-sm" title="長邊單邊加厚30.5, 寬邊單邊加厚8mm">
-                                (30.5, 8)
-                            </button>
+                            <button type="button" onclick="AppController.setBinOuterDefaults(2, 2)" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-[10px] font-medium transition shadow-sm" title="長寬單邊各加厚 2mm">(2, 2)</button>
+                            <button type="button" onclick="AppController.setBinOuterDefaults(30.5, 8)" class="px-2.5 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-[10px] font-medium transition shadow-sm" title="長邊單邊加厚30.5, 寬邊單邊加厚8mm">(30.5, 8)</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblMarginL">長邊單邊加厚 (不放隔板)</label>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">長邊單邊加厚 (X軸)</label>
                             <div class="relative">
-                                <input type="number" id="binWallMarginL" value="30.5" min="0" step="0.5" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <input type="number" id="binWallMarginL" value="30.5" min="0" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                                 <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
                             </div>
                         </div>
                         <div>
-                            <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblMarginW">寬邊單邊加厚 (不放隔板)</label>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">寬邊單邊加厚 (Z軸)</label>
                             <div class="relative">
-                                <input type="number" id="binWallMarginW" value="8" min="0" step="0.5" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <input type="number" id="binWallMarginW" value="8" min="0" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                                 <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblBottomThick">底板厚度 (Bottom)</label>
-                        <div class="relative">
-                            <input type="number" id="binBottomThickness" value="13" min="0" step="0.5" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
-                            <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">底板厚度 (Y軸)</label>
+                            <div class="relative">
+                                <input type="number" id="binBottomThickness" value="13" min="0.5" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">底板網格線厚度</label>
+                            <div class="relative">
+                                <input type="number" id="bottomRibThickness" value="3" min="0.5" step="0.5" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <span class="absolute right-2.5 top-1.5 text-[11px] text-slate-400">mm</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="text-[11px] text-teal-300 bg-teal-900/40 p-2 rounded-lg flex justify-between items-center border border-teal-900/50" id="plasticOuterDisplayBox">
-                        <span id="lblOuterDimText">計算後外框尺寸 (L×W×H):</span>
+                    <div class="text-[11px] text-teal-800 bg-teal-100/70 p-2 rounded-lg flex justify-between items-center">
+                        <span>計算後外框尺寸 (L×W×H):</span>
                         <span id="outerBinDimensionsDisplay" class="font-bold">-</span>
                     </div>
                 </div>
 
-                <!-- Basket Stacking Configuration -->
-                <div class="bg-indigo-950/40 p-3 rounded-xl border border-indigo-900/60 space-y-3 transition-colors duration-200" id="stackConfigBox">
+                <div class="bg-indigo-50/60 p-3 rounded-xl border border-indigo-200 space-y-3">
                     <div class="flex items-center justify-between">
-                        <h3 class="text-xs font-bold text-indigo-200 flex items-center gap-1.5" id="titleStack">
+                        <h3 class="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
                             <span>📚</span> 籃具堆疊設定 (Plastic Basket Stacking)
                         </h3>
                         <label class="flex items-center space-x-1.5 cursor-pointer">
-                            <input type="checkbox" id="autoStackInStainless" checked onchange="toggleAutoStack(); calculate();" class="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500">
-                            <span class="text-[11px] font-semibold text-indigo-200" id="lblAutoStack">依不鏽鋼籃自動計算層數</span>
+                            <input type="checkbox" id="autoStackInStainless" checked onchange="AppController.toggleAutoStack(); AppController.triggerRecalculate();" class="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500">
+                            <span class="text-[11px] font-semibold text-indigo-900">依不鏽鋼籃自動計算層數</span>
                         </label>
                     </div>
                     <div class="grid grid-cols-2 gap-3 items-center">
                         <div>
-                            <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblStackCount">堆疊籃具層數</label>
-                            <input type="number" id="basketStackCount" value="1" min="1" max="20" step="1" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">堆疊籃具層數</label>
+                            <input type="number" id="basketStackCount" value="1" min="1" max="20" step="1" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none opacity-60 cursor-not-allowed" readonly>
                         </div>
                         <div>
-                            <span class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblTotalStackH">總堆疊高度</span>
-                            <span id="totalStackedHeightDisplay" class="text-xs font-bold text-indigo-200 bg-indigo-900/50 px-2.5 py-2 rounded-lg block border border-indigo-900/50">-</span>
+                            <span class="block text-[11px] font-semibold text-slate-600 mb-1">總堆疊高度</span>
+                            <span id="totalStackedHeightDisplay" class="text-xs font-bold text-indigo-900 bg-indigo-100/80 px-2.5 py-2 rounded-lg block">-</span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Stainless Steel Outer Basket Config Card -->
-            <div class="bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-800 space-y-4 transition-colors duration-200" id="cardStainless">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-base font-bold text-slate-100 flex items-center gap-2" id="titleStainless">
+                    <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
                         <span>🛡️</span> 不鏽鋼外籃容納與總成設定
                     </h2>
                     <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="enableStainless" checked onchange="toggleStainlessOptions(); calculate();" class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        <input type="checkbox" id="enableStainless" checked onchange="AppController.toggleStainlessOptions(); AppController.triggerRecalculate();" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
                     </label>
                 </div>
 
                 <div id="stainlessSettingsContainer" class="space-y-3">
                     <div>
-                        <label class="block text-xs font-semibold text-slate-400 mb-1.5" id="lblStPreset">快速選用標準不鏽鋼籃空間 (內容 / 外框)</label>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1.5">快速選用標準不鏽鋼籃空間 (內容 / 外框)</label>
                         <div class="grid grid-cols-1 gap-2">
-                            <button type="button" onclick="setStainlessPreset(480, 281, 182, 521, 321, 200)" class="px-3 py-2 bg-slate-800 hover:bg-emerald-950 hover:text-emerald-300 hover:border-emerald-700 border border-slate-700 rounded-xl text-xs font-medium text-left flex justify-between items-center transition text-slate-200 st-preset-btn">
+                            <button type="button" onclick="AppController.setStainlessPreset(480, 281, 182, 521, 321, 200)" class="px-3 py-2 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 rounded-xl text-xs font-medium text-left flex justify-between items-center transition">
                                 <span><b>#1 標準</b> (容納: 480×281×182)</span>
-                                <span class="text-[11px] text-slate-400">外框: 521×321×200</span>
+                                <span class="text-[11px] text-slate-500">外框: 521×321×200</span>
                             </button>
-                            <button type="button" onclick="setStainlessPreset(610, 428, 282, 651, 469, 300)" class="px-3 py-2 bg-slate-800 hover:bg-emerald-950 hover:text-emerald-300 hover:border-emerald-700 border border-slate-700 rounded-xl text-xs font-medium text-left flex justify-between items-center transition text-slate-200 st-preset-btn">
+                            <button type="button" onclick="AppController.setStainlessPreset(610, 428, 282, 651, 469, 300)" class="px-3 py-2 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 rounded-xl text-xs font-medium text-left flex justify-between items-center transition">
                                 <span><b>#2 大型</b> (容納: 610×428×282)</span>
-                                <span class="text-[11px] text-slate-400">外框: 651×469×300</span>
+                                <span class="text-[11px] text-slate-500">外框: 651×469×300</span>
                             </button>
-                            <button type="button" onclick="setStainlessPreset(332, 183, 182, 371, 221, 200)" class="px-3 py-2 bg-slate-800 hover:bg-emerald-950 hover:text-emerald-300 hover:border-emerald-700 border border-slate-700 rounded-xl text-xs font-medium text-left flex justify-between items-center transition text-slate-200 st-preset-btn">
+                            <button type="button" onclick="AppController.setStainlessPreset(332, 183, 182, 371, 221, 200)" class="px-3 py-2 bg-slate-50 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 border border-slate-200 rounded-xl text-xs font-medium text-left flex justify-between items-center transition">
                                 <span><b>#3 小型</b> (容納: 332×183×182)</span>
-                                <span class="text-[11px] text-slate-400">外框: 371×221×200</span>
+                                <span class="text-[11px] text-slate-500">外框: 371×221×200</span>
                             </button>
                         </div>
                     </div>
 
-                    <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800 space-y-3 transition-colors duration-200" id="stInnerBox">
-                        <h4 class="text-xs font-bold text-slate-300" id="lblStInnerTitle">不鏽鋼外籃內部容納尺寸 (mm)</h4>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
+                        <h4 class="text-xs font-bold text-slate-700">不鏽鋼外籃內部容納尺寸 (mm)</h4>
                         <div class="grid grid-cols-3 gap-2">
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblStL">容納長 (L)</label>
-                                <input type="number" id="stL" value="480" min="1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">容納長 (L)</label>
+                                <input type="number" id="stL" value="480" min="1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblStW">容納寬 (W)</label>
-                                <input type="number" id="stW" value="281" min="1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">容納寬 (W)</label>
+                                <input type="number" id="stW" value="281" min="1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblStH">容納高 (H)</label>
-                                <input type="number" id="stH" value="182" min="1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">容納高 (H)</label>
+                                <input type="number" id="stH" value="182" min="1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             </div>
                         </div>
 
-                        <!-- Reservation Height Configuration -->
-                        <div class="bg-blue-950/40 p-2.5 rounded-xl border border-blue-900/60 space-y-2 mt-2 transition-colors duration-200" id="stReserveBox">
+                        <div class="bg-blue-50/70 p-2.5 rounded-xl border border-blue-200 space-y-2 mt-2">
                             <div class="flex items-center justify-between">
-                                <label for="enableReservation" class="text-[11px] font-bold text-blue-200 cursor-pointer flex items-center gap-1.5" id="lblEnableReservation">
-                                    <span>⚙️️</span> 啟用不鏽鋼籃頂部預留高度
+                                <label for="enableReservation" class="text-[11px] font-bold text-blue-900 cursor-pointer flex items-center gap-1.5">
+                                    <span>⚙</span> 啟用不鏽鋼籃頂部預留高度
                                 </label>
                                 <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="enableReservation" checked onchange="toggleReservationInput(); calculate();" class="sr-only peer">
-                                    <div class="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                                    <input type="checkbox" id="enableReservation" checked onchange="AppController.toggleReservationInput(); AppController.triggerRecalculate();" class="sr-only peer">
+                                    <div class="w-8 h-4 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
                                 </label>
                             </div>
                             <div id="reservationWrapper" class="flex items-center justify-between gap-2 pt-1">
-                                <span class="text-[11px] text-blue-300" id="lblReserveText">預留高度 (mm):</span>
-                                <input type="number" id="reservationHeight" value="15.5" min="0" step="0.5" oninput="calculate()" class="w-24 bg-slate-800 border border-blue-800 text-blue-100 rounded-lg px-2 py-1 text-xs text-right font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <span class="text-[11px] text-blue-800">預留高度 (mm):</span>
+                                <input type="number" id="reservationHeight" value="15.5" min="0" step="0.5" oninput="AppController.triggerRecalculate()" class="w-24 bg-white border border-blue-300 rounded-lg px-2 py-1 text-xs text-right font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none">
                             </div>
                         </div>
 
-                        <h4 class="text-xs font-bold text-slate-300 pt-1" id="lblStOuterTitle">不鏽鋼外籃外部總尺寸 (mm)</h4>
+                        <h4 class="text-xs font-bold text-slate-700 pt-1">不鏽鋼外籃外部總尺寸 (mm)</h4>
                         <div class="grid grid-cols-3 gap-2">
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblStOuterL">外框長 (L)</label>
-                                <input type="number" id="stOuterL" value="521" min="1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">外框長 (L)</label>
+                                <input type="number" id="stOuterL" value="521" min="1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblStOuterW">外框寬 (W)</label>
-                                <input type="number" id="stOuterW" value="321" min="1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">外框寬 (W)</label>
+                                <input type="number" id="stOuterW" value="321" min="1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             </div>
                             <div>
-                                <label class="block text-[11px] font-semibold text-slate-400 mb-1" id="lblStOuterH">外框高 (H)</label>
-                                <input type="number" id="stOuterH" value="200" min="1" step="any" oninput="calculate()" class="w-full bg-slate-800 border border-slate-700 text-slate-100 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">外框高 (H)</label>
+                                <input type="number" id="stOuterH" value="200" min="1" step="any" oninput="AppController.triggerRecalculate()" class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Stainless Check Result Display -->
-                    <div id="stainlessResultCard" class="bg-blue-950/40 border border-blue-900/60 rounded-xl p-3 space-y-1.5 text-xs transition-colors duration-200">
-                        <div class="font-bold text-blue-200 flex items-center justify-between">
-                            <span id="lblStEvalTitle">🛡 不鏽鋼籃裝載評估</span>
+                    <div id="stainlessResultCard" class="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-1.5 text-xs">
+                        <div class="font-bold text-blue-900 flex items-center justify-between">
+                            <span>🛡️ 不鏽鋼外籃裝載評估</span>
                             <span id="stFitStatus" class="px-2 py-0.5 rounded-full font-semibold text-[11px]">-</span>
                         </div>
-                        <div class="text-blue-300/90" id="stFitDetails">-</div>
+                        <div id="stFitDetails" class="text-blue-800">-</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Detailed Comparison Table Card -->
-            <div class="bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-800 transition-colors duration-200" id="cardTable">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
                 <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-base font-bold text-slate-100 flex items-center gap-2" id="titleTable">
-                        <span>📊</span> 排布方案詳細比較
+                    <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                        <span>📊</span> 姿勢變體詳細比較
                     </h3>
-                    <span class="text-xs text-slate-400" id="lblTableTip">💡 點擊下方任一方案可預覽 3D 效果</span>
+                    <span class="text-xs text-slate-400">💡 點擊下方任一方案可預覽 3D 效果</span>
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-300">
-                        <thead class="bg-slate-800 text-slate-300 uppercase text-xs font-semibold" id="tableHead">
+                    <table class="w-full text-left text-sm text-slate-600">
+                        <thead class="bg-slate-100 text-slate-700 uppercase text-xs font-semibold">
                             <tr>
-                                <th class="p-3 rounded-l-lg">排列模式</th>
+                                <th class="p-3 rounded-l-lg">3D 正交狀態</th>
                                 <th class="p-3">旋轉角度</th>
-                                <th class="p-3">單層 (X×Y)</th>
-                                <th class="p-3">層數 (Z)</th>
+                                <th class="p-3">單層 (X×Z)</th>
+                                <th class="p-3">層數 (Y)</th>
                                 <th class="p-3 rounded-r-lg">總數量</th>
                             </tr>
                         </thead>
-                        <tbody id="orientationTableBody" class="divide-y divide-slate-800">
-                            <!-- Populated by JS -->
+                        <tbody id="orientationTableBody" class="divide-y divide-slate-100">
                         </tbody>
                     </table>
                 </div>
@@ -406,41 +397,54 @@
 
         </div>
 
-        <!-- Right Panel: 3D Visualization & Summary Cards -->
         <div class="lg:col-span-7 space-y-6 flex flex-col">
             
+            <div id="fittingWarningBanner" class="hidden bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3 rounded-2xl flex items-center gap-3 shadow-sm">
+                <span class="text-xl">⚠</span>
+                <div>
+                    <h4 class="text-sm font-bold">工件無法放入塑膠籃容納空間內！</h4>
+                    <p id="fittingWarningText" class="text-xs text-rose-700 mt-0.5">單個工件的尺寸大於或等於容納空間（長、寬或高超出），請檢查尺寸或增加塑膠籃容納範圍。</p>
+                </div>
+            </div>
+
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <div class="bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-800 flex flex-col justify-between transition-colors duration-200" id="cardSum1">
-                    <span class="text-xs font-medium text-slate-400" id="lblSum1">總裝箱數量 (全堆疊)</span>
-                    <span id="totalCount" class="text-2xl font-extrabold text-emerald-400 mt-1">-</span>
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <span class="text-xs font-medium text-slate-500">總裝箱數量 (全堆疊)</span>
+                    <span id="totalCount" class="text-2xl font-extrabold text-emerald-600 mt-1">-</span>
                 </div>
-                <div class="bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-800 flex flex-col justify-between transition-colors duration-200" id="cardSum2">
-                    <span class="text-xs font-medium text-slate-400" id="lblSum2">空間利用率 (單籃)</span>
-                    <span id="utilization" class="text-2xl font-extrabold text-slate-100 mt-1">-</span>
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <span class="text-xs font-medium text-slate-500">空間利用率 (單籃)</span>
+                    <span id="utilization" class="text-2xl font-extrabold text-slate-800 mt-1">-</span>
                 </div>
-                <div class="bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-800 flex flex-col justify-between transition-colors duration-200" id="cardSum3">
-                    <span class="text-xs font-medium text-slate-400" id="lblSum3">最佳放置高度</span>
-                    <span id="bestOrientation" class="text-sm font-bold text-slate-200 mt-2">-</span>
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <span class="text-xs font-medium text-slate-500">最佳放置姿態</span>
+                    <span id="bestOrientation" class="text-sm font-bold text-slate-800 mt-2">-</span>
                 </div>
-                <div class="bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-800 flex flex-col justify-between transition-colors duration-200" id="cardSum4">
-                    <span class="text-xs font-medium text-slate-400" id="lblSum4">旋轉角度 / 層數</span>
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <span class="text-xs font-medium text-slate-500">旋轉角度 / 層數</span>
                     <div class="mt-1">
-                        <div id="rotationAngleDisplay" class="text-xs font-bold text-emerald-400">-</div>
-                        <div id="layerCount" class="text-xs text-slate-400 mt-0.5">-</div>
-                        <div id="stackLayers" class="text-xs text-slate-400">-</div>
+                        <div id="rotationAngleDisplay" class="text-xs font-bold text-emerald-600">-</div>
+                        <div id="layerCount" class="text-xs text-slate-500 mt-0.5">-</div>
+                        <div id="stackLayers" class="text-xs text-slate-500">-</div>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-slate-900 rounded-3xl shadow-lg border border-slate-800 flex-grow relative overflow-hidden min-h-[550px] transition-colors duration-200" id="canvas-container">
+            <div class="bg-white rounded-3xl shadow-lg border border-slate-200 flex-grow relative overflow-hidden min-h-[550px]" id="canvas-container">
                 <div id="canvas-message" class="absolute inset-0 flex items-center justify-center text-slate-400 text-sm">
                     載入 3D 預覽中...
                 </div>
-                <div class="absolute bottom-4 left-4 bg-slate-950/85 backdrop-blur-md text-slate-300 px-3 py-1.5 rounded-xl text-xs border border-slate-800 pointer-events-none z-10 space-y-1 transition-colors duration-200" id="canvasTipBox">
-                    <div id="lblTipText">💡 提示: 滑鼠左鍵旋轉 | 右鍵平移 | 滾輪縮放</div>
-                    <div class="flex items-center gap-3 text-[11px] pt-1 border-t border-slate-800" id="canvasLegend">
+                <div class="absolute top-4 right-4 z-20 flex items-center gap-2">
+                    <button type="button" onclick="AppController.toggleWorkpieceTransparency()" id="transparencyToggleBtn" class="bg-slate-900/80 hover:bg-slate-800 text-white backdrop-blur-md px-3 py-1.5 rounded-xl text-xs font-medium transition shadow-md border border-slate-700 flex items-center gap-1.5">
+                        <span>👁️</span> <span id="transparencyBtnText">工件半透明: 關閉</span>
+                    </button>
+                </div>
+                <div class="absolute bottom-4 left-4 bg-slate-900/80 backdrop-blur-md text-white px-3 py-1.5 rounded-xl text-xs pointer-events-none z-10 space-y-1">
+                    <div>💡 提示: 滑鼠左鍵旋轉 | 右鍵平移 | 滾輪縮放</div>
+                    <div class="flex items-center gap-3 text-[11px] pt-1 border-t border-slate-700">
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span> 塑膠籃外框</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 隔板 (Partition)</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block"></span> 底板網格槽 (Ribs)</span>
+                        <span id="legendPartition" class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> 隔板 (含外圍邊界)</span>
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> 工件</span>
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block"></span> 不鏽鋼外籃</span>
                     </div>
@@ -451,768 +455,21 @@
 
     </main>
 
-    <footer class="bg-slate-900 border-t border-slate-800 py-4 mt-auto transition-colors duration-200" id="mainFooter">
-        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400 transition-colors duration-200" id="footerText">
-            智慧裝箱與隔板總成演算法 © 2026 | 支援 13mm 倍數隔板、塑膠籃堆疊與不鏽鋼外籃容納計算
-        </div>
-    </footer>
-
     <script>
-        let scene, camera, renderer, controls;
-        let binMesh, partitionGroup, workpieceGroup, stainlessMesh;
-        let currentBestResult = null;
-        let allCalculatedResults = [];
-        let selectedResultIndex = 0;
-        let isDarkMode = true; // Default to Dark Mode
-
-        window.onload = function() {
-            initThreeJS();
-            toggleRotationOptions();
-            toggleStainlessOptions();
-            toggleReservationInput();
-            toggleAutoStack();
-            togglePartitionOptions();
-            calculate();
-            window.addEventListener('resize', onWindowResize);
-        };
-
-        function toggleTheme() {
-            isDarkMode = !isDarkMode;
-            const body = document.getElementById('appBody');
-            const themeIcon = document.getElementById('themeIcon');
-            const themeText = document.getElementById('themeText');
-
-            if (isDarkMode) {
-                body.classList.add('dark');
-                body.classList.remove('bg-slate-50', 'text-slate-900');
-                body.classList.add('bg-slate-950', 'text-slate-100');
-                themeIcon.innerText = '☀️';
-                themeText.innerText = '切換 Light 模式';
-                
-                applyThemeStyles(true);
-                if (scene) scene.background = new THREE.Color(0x0f172a);
-            } else {
-                body.classList.remove('dark');
-                body.classList.remove('bg-slate-950', 'text-slate-100');
-                body.classList.add('bg-slate-50', 'text-slate-900');
-                themeIcon.innerText = '🌙';
-                themeText.innerText = '切換 Dark 模式';
-                
-                applyThemeStyles(false);
-                if (scene) scene.background = new THREE.Color(0xf8fafc);
-            }
-            calculate();
-        }
-
-        function applyThemeStyles(dark) {
-            const header = document.getElementById('mainHeader');
-            const footer = document.getElementById('mainFooter');
-            
-            const cardIds = ['cardUnit', 'cardPart', 'cardBin', 'cardStainless', 'cardTable', 'cardSum1', 'cardSum2', 'cardSum3', 'cardSum4', 'canvas-container'];
-            cardIds.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                if (dark) {
-                    el.classList.remove('bg-white', 'border-slate-200', 'text-slate-900', 'shadow-sm');
-                    el.classList.add('bg-slate-900', 'border-slate-800', 'text-slate-100');
-                } else {
-                    el.classList.remove('bg-slate-900', 'border-slate-800', 'text-slate-100');
-                    el.classList.add('bg-white', 'border-slate-200', 'text-slate-900', 'shadow-sm');
-                }
-            });
-
-            if (header) {
-                header.className = dark ? "bg-slate-900 border-b border-slate-800 sticky top-0 z-50 shadow-sm transition-colors duration-200" : "bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm transition-colors duration-200";
-            }
-            if (footer) {
-                footer.className = dark ? "bg-slate-900 border-t border-slate-800 py-4 mt-auto transition-colors duration-200" : "bg-white border-t border-slate-200 py-4 mt-auto transition-colors duration-200 text-slate-700";
-            }
-
-            // Sub-boxes
-            const subBoxes = ['rotationSettingsContainer', 'partitionCardBox', 'gridConfigBox', 'plasticOuterBox', 'stackConfigBox', 'stInnerBox', 'stReserveBox', 'stainlessResultCard', 'canvasTipBox'];
-            subBoxes.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                if (dark) {
-                    el.classList.remove('bg-slate-50', 'border-slate-200', 'text-slate-900');
-                    if (id === 'rotationSettingsContainer' || id === 'gridConfigBox') el.classList.add('bg-slate-950/50', 'border-slate-800', 'text-slate-100');
-                } else {
-                    el.classList.remove('bg-slate-950/50', 'border-slate-800', 'text-slate-100');
-                    el.classList.add('bg-slate-50', 'border-slate-200', 'text-slate-900');
-                }
-            });
-
-            // Inputs and selects
-            document.querySelectorAll('input:not([type="checkbox"]), select').forEach(input => {
-                if (dark) {
-                    input.classList.remove('bg-white', 'border-slate-300', 'text-slate-900', 'font-medium');
-                    input.classList.add('bg-slate-800', 'border-slate-700', 'text-slate-100');
-                } else {
-                    input.classList.remove('bg-slate-800', 'border-slate-700', 'text-slate-100');
-                    input.classList.add('bg-white', 'border-slate-300', 'text-slate-900', 'font-medium');
-                }
-            });
-
-            // Strict text contrast enforcement
-            const textElements = document.querySelectorAll('h1, h2, h3, h4, label, span, p');
-            textElements.forEach(el => {
-                if (!dark) {
-                    if (el.classList.contains('text-slate-400') || el.classList.contains('text-slate-300') || el.classList.contains('text-slate-200')) {
-                        el.classList.remove('text-slate-400', 'text-slate-300', 'text-slate-200');
-                        el.classList.add('text-slate-700');
-                    } else if (el.classList.contains('text-slate-100')) {
-                        el.classList.remove('text-slate-100');
-                        el.classList.add('text-slate-900');
-                    } else if (el.classList.contains('text-emerald-400')) {
-                        el.classList.remove('text-emerald-400');
-                        el.classList.add('text-emerald-700');
-                    } else if (el.classList.contains('text-indigo-200')) {
-                        el.classList.remove('text-indigo-200');
-                        el.classList.add('text-indigo-900');
-                    } else if (el.classList.contains('text-blue-200') || el.classList.contains('text-blue-300')) {
-                        el.classList.remove('text-blue-200', 'text-blue-300');
-                        el.classList.add('text-blue-900');
-                    } else if (el.classList.contains('text-amber-200') || el.classList.contains('text-amber-300')) {
-                        el.classList.remove('text-amber-200', 'text-amber-300');
-                        el.classList.add('text-amber-900');
-                    } else if (el.classList.contains('text-teal-200') || el.classList.contains('text-teal-300')) {
-                        el.classList.remove('text-teal-200', 'text-teal-300');
-                        el.classList.add('text-teal-900');
-                    }
-                } else {
-                    if (el.classList.contains('text-slate-700')) {
-                        el.classList.remove('text-slate-700');
-                        el.classList.add('text-slate-400');
-                    } else if (el.classList.contains('text-slate-900')) {
-                        el.classList.remove('text-slate-900');
-                        el.classList.add('text-slate-100');
-                    } else if (el.classList.contains('text-emerald-700')) {
-                        el.classList.remove('text-emerald-700');
-                        el.classList.add('text-emerald-400');
-                    } else if (el.classList.contains('text-indigo-900')) {
-                        el.classList.remove('text-indigo-900');
-                        el.classList.add('text-indigo-200');
-                    } else if (el.classList.contains('text-blue-900')) {
-                        el.classList.remove('text-blue-900');
-                        el.classList.add('text-blue-200');
-                    } else if (el.classList.contains('text-amber-900')) {
-                        el.classList.remove('text-amber-900');
-                        el.classList.add('text-amber-200');
-                    } else if (el.classList.contains('text-teal-900')) {
-                        el.classList.remove('text-teal-900');
-                        el.classList.add('text-teal-200');
-                    }
-                }
-            });
-        }
-
-        function initThreeJS() {
-            const container = document.getElementById('canvas-container');
-            const msg = document.getElementById('canvas-message');
-            if (msg) msg.style.display = 'none';
-
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(isDarkMode ? 0x0f172a : 0xf8fafc);
-
-            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
-            
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth, container.clientHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
-            container.appendChild(renderer.domElement);
-
-            if (typeof THREE.OrbitControls !== 'undefined') {
-                controls = new THREE.OrbitControls(camera, renderer.domElement);
-                controls.enableDamping = true;
-                controls.dampingFactor = 0.05;
-                controls.target.set(0, 0, 0);
-            }
-
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-            scene.add(ambientLight);
-
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(50, 100, 50);
-            scene.add(dirLight);
-
-            const gridHelper = new THREE.GridHelper(100, 20, 0x10b981, isDarkMode ? 0x334155 : 0xe2e8f0);
-            gridHelper.position.y = -0.1;
-            scene.add(gridHelper);
-
-            animate();
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if (controls) controls.update();
-            if (renderer && scene && camera) renderer.render(scene, camera);
-        }
-
-        function onWindowResize() {
-            const container = document.getElementById('canvas-container');
-            if (!container || !renderer || !camera) return;
-            camera.aspect = container.clientWidth / container.clientHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(container.clientWidth, container.clientHeight);
-        }
-
-        function resetForm() {
-            document.getElementById('unit').value = 'mm';
-            document.getElementById('gapSize').value = '1';
-            document.getElementById('enableRotation').checked = true;
-            document.getElementById('rotationMode').value = 'auto';
-            document.getElementById('fixedAngle').value = '45';
-            document.getElementById('enablePartitions').checked = true;
-            document.getElementById('partitionThickness').value = '3';
-            document.getElementById('partitionPitchMultiplier').value = '13';
-            document.getElementById('gridCountL').value = '28';
-            document.getElementById('gridPitchL').value = '13';
-            document.getElementById('gridCountW').value = '20';
-            document.getElementById('gridPitchW').value = '13';
-            document.getElementById('binL').value = '364';
-            document.getElementById('binW').value = '260';
-            document.getElementById('binH').value = '96';
-            document.getElementById('binWallMarginL').value = '30.5';
-            document.getElementById('binWallMarginW').value = '8';
-            document.getElementById('binBottomThickness').value = '13';
-            document.getElementById('autoStackInStainless').checked = true;
-            document.getElementById('basketStackCount').value = '1';
-            document.getElementById('partL').value = '24';
-            document.getElementById('partW').value = '24';
-            document.getElementById('partH').value = '25.5';
-            
-            document.getElementById('enableStainless').checked = true;
-            document.getElementById('stL').value = '480';
-            document.getElementById('stW').value = '281';
-            document.getElementById('stH').value = '182';
-            document.getElementById('stOuterL').value = '521';
-            document.getElementById('stOuterW').value = '321';
-            document.getElementById('stOuterH').value = '200';
-            document.getElementById('enableReservation').checked = true;
-            document.getElementById('reservationHeight').value = '15.5';
-
-            toggleRotationOptions();
-            toggleStainlessOptions();
-            toggleReservationInput();
-            toggleAutoStack();
-            togglePartitionOptions();
-            calculate();
-        }
-
-        function calculateFromGrid() {
-            const countL = parseFloat(document.getElementById('gridCountL').value) || 0;
-            const pitchL = parseFloat(document.getElementById('gridPitchL').value) || 13;
-            const countW = parseFloat(document.getElementById('gridCountW').value) || 0;
-            const pitchW = parseFloat(document.getElementById('gridPitchW').value) || 13;
-
-            const validPitchL = Math.max(13, Math.round(pitchL / 13) * 13);
-            const validPitchW = Math.max(13, Math.round(pitchW / 13) * 13);
-
-            document.getElementById('gridPitchL').value = validPitchL;
-            document.getElementById('gridPitchW').value = validPitchW;
-
-            const calculatedL = countL * validPitchL;
-            const calculatedW = countW * validPitchW;
-
-            document.getElementById('binL').value = calculatedL.toFixed(1).replace(/\.0$/, '');
-            document.getElementById('binW').value = calculatedW.toFixed(1).replace(/\.0$/, '');
-
-            calculate();
-        }
-
-        function setBinHeight(hVal) {
-            document.getElementById('binH').value = hVal;
-            calculate();
-        }
-
-        function setBinOuterDefaults(marginL, marginW) {
-            document.getElementById('binWallMarginL').value = marginL;
-            document.getElementById('binWallMarginW').value = marginW;
-            calculate();
-        }
-
-        function setStainlessPreset(inL, inW, inH, outL, outW, outH) {
-            document.getElementById('stL').value = inL;
-            document.getElementById('stW').value = inW;
-            document.getElementById('stH').value = inH;
-            document.getElementById('stOuterL').value = outL;
-            document.getElementById('stOuterW').value = outW;
-            document.getElementById('stOuterH').value = outH;
-            calculate();
-        }
-
-        function toggleRotationOptions() {
-            const enabled = document.getElementById('enableRotation').checked;
-            const container = document.getElementById('rotationSettingsContainer');
-            if (enabled) {
-                container.classList.remove('hidden');
-            } else {
-                container.classList.add('hidden');
-            }
-            toggleRotationMode();
-        }
-
-        function toggleRotationMode() {
-            const enabled = document.getElementById('enableRotation').checked;
-            const mode = document.getElementById('rotationMode').value;
-            const wrapper = document.getElementById('fixedAngleWrapper');
-            if (enabled && mode === 'fixed') {
-                wrapper.classList.remove('hidden');
-            } else {
-                wrapper.classList.add('hidden');
-            }
-        }
-
-        function togglePartitionOptions() {
-            const enabled = document.getElementById('enablePartitions').checked;
-            const sub = document.getElementById('partitionSettingsSub');
-            if (enabled) {
-                sub.classList.remove('opacity-40', 'pointer-events-none');
-            } else {
-                sub.classList.add('opacity-40', 'pointer-events-none');
-            }
-        }
-
-        function toggleStainlessOptions() {
-            const enabled = document.getElementById('enableStainless').checked;
-            const container = document.getElementById('stainlessSettingsContainer');
-            const card = document.getElementById('stainlessResultCard');
-            if (enabled) {
-                container.classList.remove('opacity-50', 'pointer-events-none');
-                if (card) card.style.display = 'block';
-            } else {
-                container.classList.add('opacity-50', 'pointer-events-none');
-                if (card) card.style.display = 'none';
-            }
-        }
-
-        function toggleReservationInput() {
-            const enabled = document.getElementById('enableReservation').checked;
-            const wrapper = document.getElementById('reservationWrapper');
-            if (enabled) {
-                wrapper.classList.remove('opacity-40', 'pointer-events-none');
-            } else {
-                wrapper.classList.add('opacity-40', 'pointer-events-none');
-            }
-        }
-
-        function toggleAutoStack() {
-            const autoStack = document.getElementById('autoStackInStainless').checked;
-            const stackCountInput = document.getElementById('basketStackCount');
-            if (autoStack) {
-                stackCountInput.setAttribute('readonly', 'true');
-                stackCountInput.classList.add('opacity-60', 'cursor-not-allowed');
-            } else {
-                stackCountInput.removeAttribute('readonly');
-                stackCountInput.classList.remove('opacity-60', 'cursor-not-allowed');
-            }
-        }
-
-        // Strict 2D OBB Collision Check & Bounding Box for Rotated Rectangles inside plastic bin (L, W) with Partitions & Gaps
-        function checkRotatedArrangementFeasibility(nx, ny, bboxL, bboxW, gap, binL, binW, partitionThick, enablePartitions, theta) {
-            if (nx <= 0 || ny <= 0) return { valid: false, usedL: 0, usedW: 0 };
-
-            const cos = Math.abs(Math.cos(theta));
-            const sin = Math.abs(Math.sin(theta));
-
-            const hL = bboxL / 2;
-            const hW = bboxW / 2;
-            
-            const localCorners = [
-                {x: -hL, y: -hW}, {x: hL, y: -hW},
-                {x: hL, y: hW}, {x: -hL, y: hW}
-            ];
-
-            const rotatedCorners = localCorners.map(c => ({
-                x: c.x * cos - c.y * sin,
-                y: c.x * sin + c.y * cos
-            }));
-
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            rotatedCorners.forEach(c => {
-                minX = Math.min(minX, c.x);
-                maxX = Math.max(maxX, c.x);
-                minY = Math.min(minY, c.y);
-                maxY = Math.max(maxY, c.y);
-            });
-
-            const effectiveSpanX = (maxX - minX) + 2 * gap;
-            const effectiveSpanY = (maxY - minY) + 2 * gap;
-
-            let totalSpanL = 0;
-            let totalSpanW = 0;
-
-            if (enablePartitions) {
-                totalSpanL = nx * effectiveSpanX + (nx + 1) * partitionThick;
-                totalSpanW = ny * effectiveSpanY + (ny + 1) * partitionThick;
-            } else {
-                totalSpanL = nx * effectiveSpanX + (nx - 1) * gap;
-                totalSpanW = ny * effectiveSpanY + (ny - 1) * gap;
-            }
-
-            if (totalSpanL <= binL + 1e-4 && totalSpanW <= binW + 1e-4) {
-                return { valid: true, usedL: totalSpanL, usedW: totalSpanW };
-            }
-
-            return { valid: false, usedL: totalSpanL, usedW: totalSpanW };
-        }
-
-        function calculateMaxCountRotated(binDim, itemDim1, itemDim2, gap, partitionThick, enablePartitions, theta) {
-            let high = Math.floor(binDim / (Math.min(itemDim1, itemDim2) + gap));
-            let bestCount = 0;
-
-            const cos = Math.abs(Math.cos(theta));
-            const sin = Math.abs(Math.sin(theta));
-            const span = (itemDim1 * cos + itemDim2 * sin) + 2 * gap;
-
-            for (let n = 1; n <= high + 2; n++) {
-                let needed = enablePartitions ? (n * span + (n + 1) * partitionThick) : (n * span + (n - 1) * gap);
-                if (needed <= binDim + 1e-4) {
-                    bestCount = n;
-                } else {
-                    break;
-                }
-            }
-            return bestCount;
-        }
-
-        function evaluateLayoutWithPartitions(binL, binW, binH, partL, partW, partH, gap, angleDeg, heightOri, partitionThick, enablePartitions) {
-            const theta = angleDeg * Math.PI / 180;
-            
-            const maxNx = calculateMaxCountRotated(binL, partL, partW, gap, partitionThick, enablePartitions, theta);
-            const maxNy = calculateMaxCountRotated(binW, partL, partW, gap, partitionThick, enablePartitions, theta);
-
-            let bestNx = 0, bestNy = 0, bestLayerCount = 0;
-
-            for (let nx = maxNx; nx >= 1; nx--) {
-                for (let ny = maxNy; ny >= 1; ny--) {
-                    const check = checkRotatedArrangementFeasibility(nx, ny, partL, partW, gap, binL, binW, partitionThick, enablePartitions, theta);
-                    if (check.valid) {
-                        const count = nx * ny;
-                        if (count > bestLayerCount) {
-                            bestLayerCount = count;
-                            bestNx = nx;
-                            bestNy = ny;
-                        }
-                    }
-                }
-            }
-
-            let nz = 1;
-            if (enablePartitions) {
-                nz = (heightOri.h <= binH + 1e-4) ? 1 : 0;
-            } else {
-                nz = Math.max(0, Math.floor((binH + gap) / (heightOri.h + gap)));
-            }
-            const totalCount = bestLayerCount * nz;
-
-            return {
-                angle: angleDeg,
-                heightOri: heightOri,
-                nx: bestNx,
-                ny: bestNy,
-                nz: nz,
-                layerCount: bestLayerCount,
-                totalCount: totalCount,
-                useTransposed: false
-            };
-        }
-
-        function calculate() {
-            const unit = document.getElementById('unit').value;
-            const unitLabelGap = document.getElementById('unitLabelGap');
-            if (unitLabelGap) unitLabelGap.innerText = unit;
-
-            const binL = parseFloat(document.getElementById('binL').value) || 0;
-            const binW = parseFloat(document.getElementById('binW').value) || 0;
-            const binH = parseFloat(document.getElementById('binH').value) || 0;
-
-            const wallMarginL = parseFloat(document.getElementById('binWallMarginL').value) || 0;
-            const wallMarginW = parseFloat(document.getElementById('binWallMarginW').value) || 0;
-            const bottomThickness = parseFloat(document.getElementById('binBottomThickness').value) || 0;
-
-            const outerL = binL + (wallMarginL * 2);
-            const outerW = binW + (wallMarginW * 2);
-            
-            const plasticBasketUnitHeight = binH + bottomThickness;
-            const outerH = plasticBasketUnitHeight;
-
-            const enableStainless = document.getElementById('enableStainless').checked;
-            const autoStack = document.getElementById('autoStackInStainless').checked;
-            let basketStackCount = parseInt(document.getElementById('basketStackCount').value) || 1;
-
-            const enableReservation = document.getElementById('enableReservation').checked;
-            const reservationH = enableReservation ? (parseFloat(document.getElementById('reservationHeight').value) || 0) : 0;
-
-            if (enableStainless && autoStack && plasticBasketUnitHeight > 0) {
-                const stH = parseFloat(document.getElementById('stH').value) || 0;
-                const availableHeightForBaskets = stH - reservationH;
-                if (availableHeightForBaskets > 0) {
-                    basketStackCount = Math.max(1, Math.floor(availableHeightForBaskets / plasticBasketUnitHeight));
-                    const stackInput = document.getElementById('basketStackCount');
-                    if (stackInput) stackInput.value = basketStackCount;
-                }
-            }
-
-            const totalStackedHeight = plasticBasketUnitHeight * basketStackCount;
-
-            const outerBinDimDisp = document.getElementById('outerBinDimensionsDisplay');
-            if (outerBinDimDisp) {
-                outerBinDimDisp.innerText = `${outerL.toFixed(1).replace(/\.0$/, '')} × ${outerW.toFixed(1).replace(/\.0$/, '')} × ${outerH.toFixed(1).replace(/\.0$/, '')} ${unit}`;
-            }
-
-            const totalStackedHeightDisp = document.getElementById('totalStackedHeightDisplay');
-            if (totalStackedHeightDisp) {
-                totalStackedHeightDisp.innerText = `${totalStackedHeight.toFixed(1).replace(/\.0$/, '')} ${unit} (${basketStackCount}層塑膠籃)`;
-            }
-
-            const partL = parseFloat(document.getElementById('partL').value) || 0;
-            const partW = parseFloat(document.getElementById('partW').value) || 0;
-            const partH = parseFloat(document.getElementById('partH').value) || 0;
-
-            const gap = parseFloat(document.getElementById('gapSize').value) || 0;
-            const enableRotation = document.getElementById('enableRotation').checked;
-            const rotationMode = document.getElementById('rotationMode').value;
-            const fixedAngle = parseFloat(document.getElementById('fixedAngle').value) || 0;
-
-            const enablePartitions = document.getElementById('enablePartitions').checked;
-            const partitionThick = parseFloat(document.getElementById('partitionThickness').value) || 3;
-
-            if (binL <= 0 || binW <= 0 || binH <= 0 || partL <= 0 || partW <= 0 || partH <= 0) {
-                return;
-            }
-
-            const heightOrientations = [
-                { name: '高度方向 H = h', l: partL, w: partW, h: partH },
-                { name: '高度方向 H = w', l: partL, w: partH, h: partW },
-                { name: '高度方向 H = l', l: partW, w: partH, h: partL },
-            ];
-
-            let allResults = [];
-            let anglesToTest = [0];
-            if (enableRotation) {
-                if (rotationMode === 'fixed') {
-                    anglesToTest = [fixedAngle];
-                } else {
-                    anglesToTest = [];
-                    for (let a = 0; a <= 90; a += 5) {
-                        anglesToTest.push(a);
-                    }
-                }
-            }
-
-            heightOrientations.forEach(hOri => {
-                anglesToTest.forEach(angle => {
-                    const res = evaluateLayoutWithPartitions(binL, binW, binH, hOri.l, hOri.w, hOri.h, gap, angle, hOri, partitionThick, enablePartitions);
-                    if (res.totalCount > 0) {
-                        allResults.push(res);
-                    }
-                });
-            });
-
-            allResults.sort((a, b) => b.totalCount - a.totalCount || b.layerCount - a.layerCount);
-            allCalculatedResults = allResults;
-
-            if (allCalculatedResults.length === 0) {
-                allCalculatedResults = [{
-                    angle: 0, heightOri: heightOrientations[0], nx: 0, ny: 0, nz: 0, layerCount: 0, totalCount: 0, useTransposed: false
-                }];
-            }
-
-            if (selectedResultIndex >= allCalculatedResults.length) {
-                selectedResultIndex = 0;
-            }
-
-            const activeRes = allCalculatedResults[selectedResultIndex] || allCalculatedResults[0];
-
-            const binVolume = binL * binW * binH;
-            const partVolume = partL * partW * partH;
-            const totalPartVolume = activeRes.totalCount * partVolume;
-            const utilization = binVolume > 0 ? (totalPartVolume / binVolume) * 100 : 0;
-
-            activeRes.utilization = utilization;
-            currentBestResult = activeRes;
-
-            const totalItemsAllBins = activeRes.totalCount * basketStackCount;
-
-            document.getElementById('totalCount').innerText = totalItemsAllBins;
-            document.getElementById('utilization').innerText = utilization.toFixed(1) + '%';
-            document.getElementById('bestOrientation').innerText = `${activeRes.heightOri.name}`;
-            document.getElementById('layerCount').innerText = `${activeRes.nx} × ${activeRes.ny} = ${activeRes.layerCount}`;
-            document.getElementById('stackLayers').innerText = `${activeRes.nz} 層`;
-            document.getElementById('rotationAngleDisplay').innerText = `${activeRes.angle}° ${activeRes.angle === 0 ? '(正交)' : '(旋轉斜放)'}`;
-
-            const topResults = allCalculatedResults.slice(0, 10);
-
-            const tbody = document.getElementById('orientationTableBody');
-            tbody.innerHTML = '';
-            topResults.forEach((res, idx) => {
-                const isSelected = idx === selectedResultIndex;
-                const isBest = idx === 0 && res.totalCount > 0;
-                
-                const row = document.createElement('tr');
-                if (isSelected) {
-                    row.className = isDarkMode ? 'bg-emerald-950/80 font-bold text-emerald-200 cursor-pointer border-l-4 border-emerald-500 shadow-sm transition' : 'bg-emerald-100 font-bold text-emerald-900 cursor-pointer border-l-4 border-emerald-600 shadow-sm transition';
-                } else if (isBest) {
-                    row.className = isDarkMode ? 'bg-emerald-950/40 font-semibold text-emerald-300 cursor-pointer hover:bg-emerald-900/30 transition' : 'bg-emerald-50 font-semibold text-emerald-900 cursor-pointer hover:bg-emerald-100/60 transition';
-                } else {
-                    row.className = isDarkMode ? 'hover:bg-slate-800/50 text-slate-300 cursor-pointer transition' : 'hover:bg-slate-100 text-slate-800 cursor-pointer transition';
-                }
-                
-                row.onclick = () => {
-                    selectedResultIndex = idx;
-                    calculate();
-                };
-
-                const stackedTotal = res.totalCount * basketStackCount;
-                row.innerHTML = `
-                    <td class="p-3 flex items-center gap-2">
-                        <span>${res.heightOri.name}</span>
-                        ${isBest ? '<span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full">最佳</span>' : ''}
-                        ${isSelected && !isBest ? '<span class="bg-slate-700 text-white text-[10px] px-2 py-0.5 rounded-full">檢視中</span>' : ''}
-                    </td>
-                    <td class="p-3">${res.angle}°</td>
-                    <td class="p-3">${res.nx} × ${res.ny} (${res.layerCount}個)</td>
-                    <td class="p-3">${res.nz} 層</td>
-                    <td class="p-3 text-emerald-600 dark:text-emerald-400 font-bold">${stackedTotal} 個 <span class="text-[10px] text-slate-500 font-normal">(${basketStackCount}層)</span></td>
-                `;
-                tbody.appendChild(row);
-            });
-
-            if (enableStainless) {
-                const stL = parseFloat(document.getElementById('stL').value) || 0;
-                const stW = parseFloat(document.getElementById('stW').value) || 0;
-                const stH = parseFloat(document.getElementById('stH').value) || 0;
-
-                const stFitStatus = document.getElementById('stFitStatus');
-                const stFitDetails = document.getElementById('stFitDetails');
-
-                const maxPossibleLayers = plasticBasketUnitHeight > 0 ? Math.floor((stH - reservationH) / plasticBasketUnitHeight) : 0;
-                const fitsNormal = (outerL <= stL && outerW <= stW && (totalStackedHeight + reservationH) <= stH) ||
-                                   (outerL <= stW && outerW <= stL && (totalStackedHeight + reservationH) <= stH);
-
-                if (fitsNormal) {
-                    stFitStatus.className = "px-2 py-0.5 rounded-full font-semibold text-[11px] bg-emerald-950 text-emerald-300 border border-emerald-800";
-                    stFitStatus.innerText = "✓ 可完全容納";
-                    stFitDetails.innerHTML = `目前堆疊 <b>${basketStackCount}</b> 層（總高 <b>${totalStackedHeight.toFixed(1)}</b> mm ${reservationH > 0 ? `+ 預留高 <b>${reservationH}</b> mm = <b>${(totalStackedHeight + reservationH).toFixed(1)}</b> mm` : ''}）可放入不鏽鋼籃容納高 (<b>${stH}</b> mm)。該不鏽鋼籃最多可放入 <b>${maxPossibleLayers}</b> 層。`;
-                } else {
-                    stFitStatus.className = "px-2 py-0.5 rounded-full font-semibold text-[11px] bg-rose-950 text-rose-300 border border-rose-800";
-                    stFitStatus.innerText = "✗ 尺寸超出限制";
-                    let reasons = [];
-                    if (outerL > stL && outerL > stW || outerW > stW && outerW > stL) reasons.push("底面積超出");
-                    if ((totalStackedHeight + reservationH) > stH) reasons.push(`總高度${reservationH > 0 ? `+預留(${ (totalStackedHeight + reservationH).toFixed(1) }mm)` : ''}超過容納高(${stH}mm)`);
-                    stFitDetails.innerHTML = `無法放入：${reasons.join('、')}。建議最大可放入層數為 <b>${Math.max(0, maxPossibleLayers)}</b> 層。`;
-                }
-            }
-
-            const stOuterL = parseFloat(document.getElementById('stOuterL').value) || 0;
-            const stOuterW = parseFloat(document.getElementById('stOuterW').value) || 0;
-            const stOuterH = parseFloat(document.getElementById('stOuterH').value) || 0;
-
-            update3DScene(binL, binW, binH, outerL, outerW, outerH, bottomThickness, basketStackCount, activeRes, gap, enableStainless, stOuterL, stOuterW, stOuterH, enablePartitions, partitionThick);
-        }
-
-        function update3DScene(binL, binW, binH, outerL, outerW, outerH, bottomThickness, stackCount, bestRes, gap, enableStainless, stOuterL, stOuterW, stOuterH, enablePartitions, partitionThick) {
-            if (!scene) return;
-
-            if (binMesh) scene.remove(binMesh);
-            if (partitionGroup) scene.remove(partitionGroup);
-            if (workpieceGroup) scene.remove(workpieceGroup);
-            if (stainlessMesh) scene.remove(stainlessMesh);
-
-            const totalOuterH = outerH * stackCount;
-            const maxDim = Math.max(enableStainless ? stOuterL : outerL, enableStainless ? stOuterW : outerW, enableStainless ? stOuterH : totalOuterH);
-            const scale = 10 / (maxDim > 0 ? maxDim : 100);
-
-            const sBinL = binL * scale;
-            const sBinW = binW * scale;
-            const sBinH = binH * scale;
-
-            const sOuterL = outerL * scale;
-            const sOuterW = outerW * scale;
-            const sOuterH = outerH * scale;
-
-            const sBottomThick = bottomThickness * scale;
-
-            if (enableStainless) {
-                const sStOuterL = stOuterL * scale;
-                const sStOuterW = stOuterW * scale;
-                const sStOuterH = stOuterH * scale;
-
-                const stGeo = new THREE.BoxGeometry(sStOuterL, sStOuterH, sStOuterW);
-                const stEdges = new THREE.EdgesGeometry(stGeo);
-                const stLineMat = new THREE.LineBasicMaterial({ color: 0xd97706, linewidth: 3 });
-                stainlessMesh = new THREE.LineSegments(stEdges, stLineMat);
-                stainlessMesh.position.set(0, sStOuterH / 2, 0);
-
-                const stMat = new THREE.MeshBasicMaterial({ color: 0xb45309, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
-                const stBoxMesh = new THREE.Mesh(stGeo, stMat);
-                stBoxMesh.position.copy(stainlessMesh.position);
-                stainlessMesh.add(stBoxMesh);
-
-                scene.add(stainlessMesh);
-            }
-
-            binMesh = new THREE.Group();
-            for (let i = 0; i < stackCount; i++) {
-                const yOffset = i * sOuterH;
-
-                const binGeometry = new THREE.BoxGeometry(sOuterL, sOuterH, sOuterW);
-                const edges = new THREE.EdgesGeometry(binGeometry);
-                const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0284c7, linewidth: 2 });
-                const singleBinMesh = new THREE.LineSegments(edges, lineMaterial);
-                singleBinMesh.position.set(0, yOffset + sOuterH / 2, 0);
-                binMesh.add(singleBinMesh);
-
-                const outerMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, transparent: true, opacity: 0.12, side: THREE.DoubleSide });
-                const outerMesh = new THREE.Mesh(binGeometry, outerMat);
-                outerMesh.position.copy(singleBinMesh.position);
-                binMesh.add(outerMesh);
-
-                const gridHelperGeo = new THREE.PlaneGeometry(sBinL, sBinW);
-                const gridWireMat = new THREE.MeshBasicMaterial({ color: 0x0284c7, wireframe: true, transparent: true, opacity: 0.35 });
-                const bottomGridPlane = new THREE.Mesh(gridHelperGeo, gridWireMat);
-                bottomGridPlane.rotation.x = -Math.PI / 2;
-                bottomGridPlane.position.set(0, yOffset + sBottomThick, 0);
-                binMesh.add(bottomGridPlane);
-            }
-            scene.add(binMesh);
-
-            partitionGroup = new THREE.Group();
-            workpieceGroup = new THREE.Group();
-            
-            if (bestRes.totalCount > 0) {
-                const rawL = bestRes.heightOri.l;
-                const rawW = bestRes.heightOri.w;
-                const rawH = bestRes.heightOri.h;
-
-                const sPL = rawL * scale;
-                const sPW = rawW * scale;
-                const sPH = rawH * scale;
-                const sGap = gap * scale;
-                const sPartitionThick = partitionThick * scale;
-
-                const partGeo = new THREE.BoxGeometry(sPL, sPH, sPW);
-                const partMat = new THREE.MeshStandardMaterial({ 
-                    color: 0x059669, 
-                    roughness: 0.3, 
-                    metalness: 0.2,
-                    emissive: 0x047857,
-                    emissiveIntensity: 0.15
-                });
-
-                const theta = bestRes.angle * Math.PI / 180;
+        const CalculationCore = {
+            getRotatedBoundingBox(l, w, theta) {
                 const cos = Math.abs(Math.cos(theta));
                 const sin = Math.abs(Math.sin(theta));
-
-                const hL = sPL / 2;
-                const hW = sPW / 2;
-                const localCorners = [{x: -hL, y: -hW}, {x: hL, y: -hW}, {x: hL, y: hW}, {x: -hL, y: hW}];
+                const hL = l / 2;
+                const hW = w / 2;
+                const localCorners = [
+                    {x: -hL, y: -hW}, {x: hL, y: -hW},
+                    {x: hL, y: hW}, {x: -hL, y: hW}
+                ];
                 const rotatedCorners = localCorners.map(c => ({
                     x: c.x * cos - c.y * sin,
                     y: c.x * sin + c.y * cos
                 }));
-
                 let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
                 rotatedCorners.forEach(c => {
                     minX = Math.min(minX, c.x);
@@ -1220,114 +477,938 @@
                     minY = Math.min(minY, c.y);
                     maxY = Math.max(maxY, c.y);
                 });
+                return {
+                    bboxL: maxX - minX,
+                    bboxW: maxY - minY,
+                    minX, maxX, minY, maxY
+                };
+            },
 
-                const bboxSpanX = (maxX - minX);
-                const bboxSpanY = (maxY - minY);
-                const cellSpanL = bboxSpanX + 2 * sGap;
-                const cellSpanW = bboxSpanY + 2 * sGap;
+            get6OrthogonalOrientations(l, w, h) {
+                return [
+                    { name: '姿態 1: (L, W, H) [底面 L×W]', dimL: l, dimW: w, dimH: h },
+                    { name: '姿態 2: (W, L, H) [底面 W×L]', dimL: w, dimW: l, dimH: h },
+                    { name: '姿態 3: (L, H, W) [底面 L×H]', dimL: l, dimW: h, dimH: w },
+                    { name: '姿態 4: (H, L, W) [底面 H×L]', dimL: h, dimW: l, dimH: w },
+                    { name: '姿態 5: (W, H, L) [底面 W×H]', dimL: w, dimW: h, dimH: l },
+                    { name: '姿態 6: (H, W, L) [底面 H×W]', dimL: h, dimW: w, dimH: l }
+                ];
+            },
 
-                const partitionMat = new THREE.MeshStandardMaterial({
-                    color: 0xd97706,
-                    roughness: 0.4,
-                    metalness: 0.3,
-                    transparent: true,
-                    opacity: 0.85
-                });
+            evaluateLayout(binL, binW, binH, ori, gap, angleDeg, partitionThick, enablePartitions, basePitch, enableRotation, gridCountL, gridCountW, gridPitchL, gridPitchW) {
+                const itemL = ori.dimL;
+                const itemW = ori.dimW;
+                const itemH = ori.dimH;
 
-                for (let b = 0; b < stackCount; b++) {
-                    const binBaseY = b * sOuterH;
-                    const startY = binBaseY + sBottomThick + sPH / 2;
-                    const partitionY = binBaseY + sBottomThick + sBinH * scale / 2;
-                    const sBinHMesh = sBinH * scale;
+                if (itemH > binH + 1e-4) return null;
 
-                    const totalClusterL = enablePartitions 
-                        ? (bestRes.nx * cellSpanL + (bestRes.nx + 1) * sPartitionThick)
-                        : (bestRes.nx * cellSpanL + (bestRes.nx - 1) * sGap);
-                    const totalClusterW = enablePartitions 
-                        ? (bestRes.ny * cellSpanW + (bestRes.ny + 1) * sPartitionThick)
-                        : (bestRes.ny * cellSpanW + (bestRes.ny - 1) * sGap);
+                const theta = angleDeg * Math.PI / 180;
+                let spanL, spanW;
 
-                    const startXCluster = -sBinL / 2 + (sBinL - totalClusterL) / 2;
-                    const startZCluster = -sBinW / 2 + (sBinW - totalClusterW) / 2;
+                if (!enableRotation || angleDeg === 0) {
+                    spanL = itemL;
+                    spanW = itemW;
+                } else {
+                    const bbox = this.getRotatedBoundingBox(itemL, itemW, theta);
+                    spanL = bbox.bboxL;
+                    spanW = bbox.bboxW;
+                }
 
-                    if (enablePartitions) {
-                        let currentX = startXCluster;
-                        for (let x = 0; x <= bestRes.nx; x++) {
-                            const partitionGeo = new THREE.BoxGeometry(sPartitionThick, sBinHMesh, totalClusterW);
-                            const pMesh = new THREE.Mesh(partitionGeo, partitionMat);
-                            pMesh.position.set(currentX + sPartitionThick / 2, partitionY, startZCluster + totalClusterW / 2);
-                            partitionGroup.add(pMesh);
+                const pitchL = gridPitchL;
+                const pitchW = gridPitchW;
+                const nx = gridCountL;
+                const ny = gridCountW;
 
-                            const slotMarkerGeo = new THREE.BoxGeometry(sPartitionThick * 1.1, sBottomThick * 0.8, totalClusterW);
-                            const slotMarkerMat = new THREE.MeshBasicMaterial({ color: 0xb45309, transparent: true, opacity: 0.6 });
-                            const slotMarker = new THREE.Mesh(slotMarkerGeo, slotMarkerMat);
-                            slotMarker.position.set(currentX + sPartitionThick / 2, binBaseY + sBottomThick / 2, startZCluster + totalClusterW / 2);
-                            partitionGroup.add(slotMarker);
+                const innerMinL = 0.5 * pitchL + (partitionThick / 2);
+                const innerMaxL = (nx - 0.5) * pitchL - (partitionThick / 2);
+                const availableInnerL = innerMaxL - innerMinL;
 
-                            currentX += sPartitionThick + cellSpanL;
-                        }
+                const innerMinW = 0.5 * pitchW + (partitionThick / 2);
+                const innerMaxW = (ny - 0.5) * pitchW - (partitionThick / 2);
+                const availableInnerW = innerMaxW - innerMinW;
 
-                        let currentZ = startZCluster;
-                        for (let y = 0; y <= bestRes.ny; y++) {
-                            const partitionGeo = new THREE.BoxGeometry(totalClusterL, sBinHMesh, sPartitionThick);
-                            const pMesh = new THREE.Mesh(partitionGeo, partitionMat);
-                            pMesh.position.set(startXCluster + totalClusterL / 2, partitionY, currentZ + sPartitionThick / 2);
-                            partitionGroup.add(pMesh);
+                const itemFullL = spanL + (2 * gap);
+                const itemFullW = spanW + (2 * gap);
 
-                            const slotMarkerGeo = new THREE.BoxGeometry(totalClusterL, sBottomThick * 0.8, sPartitionThick * 1.1);
-                            const slotMarkerMat = new THREE.MeshBasicMaterial({ color: 0xb45309, transparent: true, opacity: 0.6 });
-                            const slotMarker = new THREE.Mesh(slotMarkerGeo, slotMarkerMat);
-                            slotMarker.position.set(startXCluster + totalClusterL / 2, binBaseY + sBottomThick / 2, currentZ + sPartitionThick / 2);
-                            partitionGroup.add(slotMarker);
+                if (itemFullL > availableInnerL + 1e-4 || itemFullW > availableInnerW + 1e-4) {
+                    return null;
+                }
 
-                            currentZ += sPartitionThick + cellSpanW;
-                        }
+                let bestNx = 0, bestNy = 0, nz = 1;
+                let cellsPerItemL = 1, cellsPerItemW = 1;
+
+                if (!enablePartitions) {
+                    if (availableInnerL < itemFullL - 1e-4) {
+                        bestNx = 0;
+                    } else {
+                        bestNx = Math.floor((availableInnerL - gap + 1e-4) / (spanL + gap));
                     }
 
-                    const workStartX = startXCluster + (enablePartitions ? sPartitionThick : 0) + sGap - minX;
-                    const workStartZ = startZCluster + (enablePartitions ? sPartitionThick : 0) + sGap - minY;
+                    if (availableInnerW < itemFullW - 1e-4) {
+                        bestNy = 0;
+                    } else {
+                        bestNy = Math.floor((availableInnerW - gap + 1e-4) / (spanW + gap));
+                    }
+                } else {
+                    cellsPerItemL = Math.max(1, Math.ceil(itemFullL / pitchL));
+                    cellsPerItemW = Math.max(1, Math.ceil(itemFullW / pitchW));
 
-                    const maxRender = 2500;
-                    let renderedCount = 0;
+                    while (cellsPerItemL <= nx && itemFullL > (cellsPerItemL * pitchL - partitionThick) + 1e-4) {
+                        cellsPerItemL++;
+                    }
+                    while (cellsPerItemW <= ny && itemFullW > (cellsPerItemW * pitchW - partitionThick) + 1e-4) {
+                        cellsPerItemW++;
+                    }
 
-                    for (let z = 0; z < bestRes.nz; z++) {
-                        for (let y = 0; y < bestRes.ny; y++) {
-                            for (let x = 0; x < bestRes.nx; x++) {
-                                if (renderedCount >= maxRender) break;
+                    bestNx = Math.floor(nx / cellsPerItemL);
+                    bestNy = Math.floor(ny / cellsPerItemW);
+                }
 
-                                const mesh = new THREE.Mesh(partGeo, partMat);
-                                mesh.rotation.y = theta;
+                if (bestNx <= 0 || bestNy <= 0) return null;
 
-                                const stepX = cellSpanL + (enablePartitions ? sPartitionThick : 0);
-                                const stepZ = cellSpanW + (enablePartitions ? sPartitionThick : 0);
+                if (!enablePartitions) {
+                    const itemTotalH = itemH + gap;
+                    if (itemTotalH <= binH + 1e-4) {
+                        nz = Math.max(1, Math.floor((binH + 1e-4) / itemTotalH));
+                    } else {
+                        nz = 0;
+                    }
+                } else {
+                    if (itemH > binH + 1e-4) {
+                        return null;
+                    }
+                    nz = 1;
+                }
 
-                                const cellCenterX = workStartX + x * stepX;
-                                const posY = startY + z * (sPH + sGap);
-                                const cellCenterZ = workStartZ + y * stepZ;
+                const totalCount = bestNx * bestNy * nz;
+                if (totalCount <= 0) return null;
 
-                                mesh.position.set(
-                                    cellCenterX,
-                                    posY,
-                                    cellCenterZ
-                                );
+                return {
+                    angle: angleDeg,
+                    orientation: ori,
+                    nx: bestNx,
+                    ny: bestNy,
+                    nz: nz,
+                    cellsPerItemL,
+                    cellsPerItemW,
+                    layerCount: bestNx * bestNy,
+                    totalCount: totalCount,
+                    gridPitchL: pitchL,
+                    gridPitchW: pitchW,
+                    spanL, spanW
+                };
+            },
 
-                                workpieceGroup.add(mesh);
-                                renderedCount++;
+            computeAllLayouts(params) {
+                const {
+                    binL, binW, binH, partL, partW, partH,
+                    gap, enableRotation, rotationMode, fixedAngle,
+                    enablePartitions, basePitch, partitionThick,
+                    gridCountL, gridCountW, gridPitchL, gridPitchW
+                } = params;
+
+                const orientations = this.get6OrthogonalOrientations(partL, partW, partH);
+                let anglesToTest = [0];
+                if (enableRotation) {
+                    if (rotationMode === 'fixed') {
+                        anglesToTest = [fixedAngle];
+                    } else {
+                        anglesToTest = [];
+                        for (let a = 0; a <= 90; a += 2) {
+                            anglesToTest.push(a);
+                        }
+                    }
+                }
+
+                let allResults = [];
+                orientations.forEach(ori => {
+                    anglesToTest.forEach(angle => {
+                        const res = this.evaluateLayout(binL, binW, binH, ori, gap, angle, partitionThick, enablePartitions, basePitch, enableRotation, gridCountL, gridCountW, gridPitchL, gridPitchW);
+                        if (res && res.totalCount > 0) {
+                            allResults.push(res);
+                        }
+                    });
+                });
+
+                let uniqueMap = new Map();
+                allResults.forEach(res => {
+                    const key = `${res.orientation.name}_${res.nx}_${res.ny}_${res.nz}_${res.angle}`;
+                    if (!uniqueMap.has(key)) {
+                        uniqueMap.set(key, res);
+                    }
+                });
+                allResults = Array.from(uniqueMap.values());
+
+                allResults.sort((a, b) => {
+                    if (b.totalCount !== a.totalCount) return b.totalCount - a.totalCount;
+                    if (b.layerCount !== a.layerCount) return b.layerCount - a.layerCount;
+                    return Math.abs(a.angle) - Math.abs(b.angle);
+                });
+
+                return allResults;
+            }
+        };
+
+        const Renderer3D = {
+            scene: null,
+            camera: null,
+            renderer: null,
+            controls: null,
+            binMesh: null,
+            partitionGroup: null,
+            workpieceGroup: null,
+            stainlessMesh: null,
+            isWorkpieceTransparent: false,
+
+            init(containerId) {
+                const container = document.getElementById(containerId);
+                const msg = document.getElementById('canvas-message');
+                
+                if (typeof THREE === 'undefined') {
+                    throw new Error("Three.js library is not loaded.");
+                }
+
+                if (msg) msg.style.display = 'none';
+
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0xf8fafc);
+
+                this.camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+                
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                container.appendChild(this.renderer.domElement);
+
+                if (typeof THREE.OrbitControls !== 'undefined') {
+                    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                    this.controls.enableDamping = true;
+                    this.controls.dampingFactor = 0.05;
+                    this.controls.target.set(0, 0, 0);
+                }
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+                this.scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight.position.set(50, 100, 50);
+                this.scene.add(dirLight);
+
+                const gridHelper = new THREE.GridHelper(100, 20, 0x10b981, 0xe2e8f0);
+                gridHelper.position.y = -0.1;
+                this.scene.add(gridHelper);
+
+                this.animate = this.animate.bind(this);
+                requestAnimationFrame(this.animate);
+            },
+
+            animate() {
+                requestAnimationFrame(this.animate);
+                if (this.controls) this.controls.update();
+                if (this.renderer && this.scene && this.camera) {
+                    this.renderer.render(this.scene, this.camera);
+                }
+            },
+
+            resize(containerId) {
+                const container = document.getElementById(containerId);
+                if (!container || !this.renderer || !this.camera) return;
+                this.camera.aspect = container.clientWidth / container.clientHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(container.clientWidth, container.clientHeight);
+            },
+
+            updateScene(renderData) {
+                if (!this.scene) return;
+
+                const {
+                    binL, binW, binH, outerL, outerW, outerH, bottomThickness, bottomRibThick,
+                    stackCount, bestRes, gap, enableStainless,
+                    stOuterL, stOuterW, stOuterH, enablePartitions, partitionThick,
+                    partL, partW, partH, gridCountL, gridCountW, gridPitchL, gridPitchW
+                } = renderData;
+
+                if (this.binMesh) { this.scene.remove(this.binMesh); this.binMesh = null; }
+                if (this.partitionGroup) { this.scene.remove(this.partitionGroup); this.partitionGroup = null; }
+                if (this.workpieceGroup) { this.scene.remove(this.workpieceGroup); this.workpieceGroup = null; }
+                if (this.stainlessMesh) { this.scene.remove(this.stainlessMesh); this.stainlessMesh = null; }
+
+                const totalOuterH = outerH * stackCount;
+                const maxDim = Math.max(enableStainless ? stOuterL : outerL, enableStainless ? stOuterW : outerW, enableStainless ? stOuterH : totalOuterH);
+                const scale = 12 / (maxDim > 0 ? maxDim : 100);
+
+                const sBinL = binL * scale;
+                const sBinW = binW * scale;
+
+                const sOuterL = outerL * scale;
+                const sOuterW = outerW * scale;
+                const sOuterH = outerH * scale;
+                const sBottomThick = bottomThickness * scale;
+                const sBottomRibThick = bottomRibThick * scale;
+                const sGap = gap * scale;
+
+                if (enableStainless) {
+                    const sStOuterL = stOuterL * scale;
+                    const sStOuterW = stOuterW * scale;
+                    const sStOuterH = stOuterH * scale;
+
+                    const stGeo = new THREE.BoxGeometry(sStOuterL, sStOuterH, sStOuterW);
+                    const stEdges = new THREE.EdgesGeometry(stGeo);
+                    const stLineMat = new THREE.LineBasicMaterial({ color: 0xd97706 });
+                    this.stainlessMesh = new THREE.LineSegments(stEdges, stLineMat);
+                    this.stainlessMesh.position.set(0, sStOuterH / 2, 0);
+
+                    const stMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.08, side: THREE.DoubleSide });
+                    const stBoxMesh = new THREE.Mesh(stGeo, stMat);
+                    stBoxMesh.position.set(0, 0, 0);
+                    this.stainlessMesh.add(stBoxMesh);
+
+                    this.scene.add(this.stainlessMesh);
+                }
+
+                this.binMesh = new THREE.Group();
+                for (let i = 0; i < stackCount; i++) {
+                    const yOffset = i * sOuterH;
+
+                    const binGeometry = new THREE.BoxGeometry(sOuterL, sOuterH, sOuterW);
+                    const edges = new THREE.EdgesGeometry(binGeometry);
+                    const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0284c7 });
+                    const singleBinMesh = new THREE.LineSegments(edges, lineMaterial);
+                    singleBinMesh.position.set(0, yOffset + sOuterH / 2, 0);
+                    this.binMesh.add(singleBinMesh);
+
+                    const outerMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.12, side: THREE.DoubleSide });
+                    const outerMesh = new THREE.Mesh(binGeometry, outerMat);
+                    outerMesh.position.set(0, 0, 0);
+                    singleBinMesh.add(outerMesh);
+
+                    const gridRibsGroup = new THREE.Group();
+                    const ribMat = new THREE.MeshStandardMaterial({
+                        color: 0x38bdf8,
+                        roughness: 0.4,
+                        metalness: 0.2
+                    });
+
+                    const nx = gridCountL;
+                    const ny = gridCountW;
+                    const pitchL = sBinL / nx;
+                    const pitchW = sBinW / ny;
+                    const startX = -sBinL / 2;
+                    const startZ = -sBinW / 2;
+                    const ribCenterY = -sOuterH / 2 + sBottomThick / 2;
+
+                    for (let x = 0; x <= nx; x++) {
+                        const xPos = startX + x * pitchL;
+                        const ribGeo = new THREE.BoxGeometry(sBottomRibThick, sBottomThick, sBinW);
+                        const ribMesh = new THREE.Mesh(ribGeo, ribMat);
+                        ribMesh.position.set(xPos, ribCenterY, 0);
+                        gridRibsGroup.add(ribMesh);
+                    }
+
+                    for (let y = 0; y <= ny; y++) {
+                        const zPos = startZ + y * pitchW;
+                        const ribGeo = new THREE.BoxGeometry(sBinL, sBottomThick, sBottomRibThick);
+                        const ribMesh = new THREE.Mesh(ribGeo, ribMat);
+                        ribMesh.position.set(0, ribCenterY, zPos);
+                        gridRibsGroup.add(ribMesh);
+                    }
+
+                    singleBinMesh.add(gridRibsGroup);
+                }
+                this.scene.add(this.binMesh);
+
+                this.partitionGroup = new THREE.Group();
+                this.workpieceGroup = new THREE.Group();
+                
+                if (bestRes && bestRes.totalCount > 0) {
+                    const ori = bestRes.orientation;
+                    
+                    const partGeo = new THREE.BoxGeometry(ori.dimL * scale, ori.dimH * scale, ori.dimW * scale);
+                    const partMat = new THREE.MeshStandardMaterial({ 
+                        color: 0x10b981, 
+                        roughness: 0.3, 
+                        metalness: 0.2,
+                        emissive: 0x047857,
+                        emissiveIntensity: 0.15,
+                        transparent: this.isWorkpieceTransparent,
+                        opacity: this.isWorkpieceTransparent ? 0.35 : 1.0,
+                        depthWrite: !this.isWorkpieceTransparent
+                    });
+
+                    const theta = (bestRes.angle || 0) * Math.PI / 180;
+                    const bbox = CalculationCore.getRotatedBoundingBox(ori.dimL, ori.dimW, theta);
+                    
+                    const partitionMat = new THREE.MeshStandardMaterial({
+                        color: 0xd97706,
+                        roughness: 0.4,
+                        metalness: 0.3,
+                        transparent: false
+                    });
+
+                    const nx = gridCountL;
+                    const ny = gridCountW;
+                    const nz = bestRes.nz;
+                    const cellsL = bestRes.cellsPerItemL;
+                    const cellsW = bestRes.cellsPerItemW;
+
+                    const pitchL = sBinL / nx;
+                    const pitchW = sBinW / ny;
+                    const sItemH = ori.dimH * scale;
+                    const sPartitionThick = partitionThick * scale;
+                    const effectivePartitionThick = sPartitionThick;
+
+                    for (let b = 0; b < stackCount; b++) {
+                        const binBaseY = b * sOuterH;
+                        const innerBottomY = binBaseY + sBottomThick;
+
+                        const totalPartitionH = sItemH * nz;
+                        const partitionCenterY = innerBottomY + totalPartitionH / 2;
+
+                        const startX = -sBinL / 2;
+                        const startZ = -sBinW / 2;
+
+                        const shouldDrawPartitionX = (index) => {
+                            if (!enablePartitions) {
+                                return index === 0 || index === nx - 1;
+                            }
+                            return index % cellsL === 0 && index < nx;
+                        };
+
+                        const shouldDrawPartitionY = (index) => {
+                            if (!enablePartitions) {
+                                return index === 0 || index === ny - 1;
+                            }
+                            return index % cellsW === 0 && index < ny;
+                        };
+
+                        for (let x = 0; x < nx; x++) {
+                            if (!shouldDrawPartitionX(x)) continue;
+                            const pX = startX + (x + 0.5) * pitchL;
+                            const pGeo = new THREE.BoxGeometry(effectivePartitionThick, totalPartitionH, sBinW);
+                            const pMesh = new THREE.Mesh(pGeo, partitionMat);
+                            pMesh.position.set(pX, partitionCenterY, 0);
+                            this.partitionGroup.add(pMesh);
+                        }
+
+                        for (let y = 0; y < ny; y++) {
+                            if (!shouldDrawPartitionY(y)) continue;
+                            const pZ = startZ + (y + 0.5) * pitchW;
+                            const pGeo = new THREE.BoxGeometry(sBinL, totalPartitionH, effectivePartitionThick);
+                            const pMesh = new THREE.Mesh(pGeo, partitionMat);
+                            pMesh.position.set(0, partitionCenterY, pZ);
+                            this.partitionGroup.add(pMesh);
+                        }
+
+                        if (!enablePartitions) {
+                            const innerMinX = startX + 0.5 * pitchL + effectivePartitionThick / 2;
+                            const innerMinZ = startZ + 0.5 * pitchW + effectivePartitionThick / 2;
+
+                            for (let z = 0; z < nz; z++) {
+                                for (let gy = 0; gy < bestRes.ny; gy++) {
+                                    for (let gx = 0; gx < bestRes.nx; gx++) {
+                                        const mesh = new THREE.Mesh(partGeo, partMat);
+                                        mesh.quaternion.identity();
+                                        if (bestRes.angle && bestRes.angle !== 0) {
+                                            mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), theta);
+                                        }
+
+                                        // 🌟 無隔板時：工件間距與牆面間距皆統一為 sGap
+                                        const posX = (innerMinX + sGap) - (bbox.minX * scale) + gx * (bestRes.spanL * scale + sGap);
+                                        const posZ = (innerMinZ + sGap) - (bbox.minY * scale) + gy * (bestRes.spanW * scale + sGap);
+                                        const posY = innerBottomY + sItemH / 2 + z * sItemH;
+
+                                        mesh.position.set(posX, posY, posZ);
+                                        this.workpieceGroup.add(mesh);
+                                    }
+                                }
+                            }
+                        } else {
+                            for (let z = 0; z < nz; z++) {
+                                for (let gy = 0; gy < bestRes.ny; gy++) {
+                                    const startGridY = gy * cellsW;
+                                    const cellMinZ = startZ + (startGridY + 0.5) * pitchW + effectivePartitionThick / 2;
+
+                                    for (let gx = 0; gx < bestRes.nx; gx++) {
+                                        const startGridX = gx * cellsL;
+                                        const cellMinX = startX + (startGridX + 0.5) * pitchL + effectivePartitionThick / 2;
+
+                                        const mesh = new THREE.Mesh(partGeo, partMat);
+                                        mesh.quaternion.identity();
+                                        if (bestRes.angle && bestRes.angle !== 0) {
+                                            mesh.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), theta);
+                                        }
+
+                                        const posX = (cellMinX + sGap) - (bbox.minX * scale);
+                                        const posZ = (cellMinZ + sGap) - (bbox.minY * scale);
+                                        const posY = innerBottomY + sItemH / 2 + z * sItemH;
+
+                                        mesh.position.set(posX, posY, posZ);
+                                        this.workpieceGroup.add(mesh);
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            scene.add(partitionGroup);
-            scene.add(workpieceGroup);
+                this.scene.add(this.partitionGroup);
+                this.scene.add(this.workpieceGroup);
 
-            if (camera && controls) {
-                camera.position.set(sOuterL * 1.8, sOuterH * stackCount * 1.2, sOuterW * 2.5);
-                controls.target.set(0, (sOuterH * stackCount) / 2, 0);
-                controls.update();
+                if (this.camera && this.controls) {
+                    const totalH = sOuterH * stackCount;
+                    this.camera.position.set(0, totalH + sOuterW * 2.5, sOuterW * 0.01);
+                    this.controls.target.set(0, totalH / 2, 0);
+                    this.controls.update();
+                }
             }
-        }
+        };
+
+        const AppController = {
+            allCalculatedResults: [],
+            selectedResultIndex: 0,
+            currentBestResult: null,
+
+            init() {
+                if (window.location.protocol === 'file:') {
+                    const warningBanner = document.getElementById('fileProtocolWarning');
+                    if (warningBanner) warningBanner.classList.remove('hidden');
+                }
+
+                try {
+                    Renderer3D.init('canvas-container');
+                } catch (e) {
+                    console.error("Three.js initialization error:", e);
+                    const msg = document.getElementById('canvas-message');
+                    if (msg) {
+                        msg.innerHTML = '<span class="text-rose-500">⚠️ 3D 模型載入失敗，請確認網路連線或改用本地伺服器執行。</span>';
+                        msg.style.display = 'flex';
+                    }
+                }
+
+                document.getElementById('enableRotation').checked = false;
+                document.getElementById('enablePartitions').checked = false;
+
+                this.onPartitionCheckboxChange();
+                this.onRotationCheckboxChange();
+                this.toggleStainlessOptions();
+                this.toggleReservationInput();
+                this.toggleAutoStack();
+                this.calculateFromGrid();
+
+                window.addEventListener('resize', () => Renderer3D.resize('canvas-container'));
+            },
+
+            toggleWorkpieceTransparency() {
+                Renderer3D.isWorkpieceTransparent = !Renderer3D.isWorkpieceTransparent;
+                const btnText = document.getElementById('transparencyBtnText');
+                if (btnText) {
+                    btnText.innerText = `工件半透明: ${Renderer3D.isWorkpieceTransparent ? '開啟' : '關閉'}`;
+                }
+                this.triggerRecalculate();
+            },
+
+            onPartitionCheckboxChange() {
+                const enabled = document.getElementById('enablePartitions').checked;
+                const sub = document.getElementById('partitionSettingsSub');
+                if (enabled) {
+                    sub.classList.remove('hidden');
+                } else {
+                    sub.classList.add('hidden');
+                }
+            },
+
+            onRotationCheckboxChange() {
+                const enabled = document.getElementById('enableRotation').checked;
+                const container = document.getElementById('rotationSettingsContainer');
+                if (enabled) {
+                    container.classList.remove('hidden');
+                } else {
+                    container.classList.add('hidden');
+                }
+                this.toggleRotationMode();
+            },
+
+            resetForm() {
+                document.getElementById('unit').value = 'mm';
+                document.getElementById('gapSize').value = '1';
+                document.getElementById('enableRotation').checked = false;
+                document.getElementById('rotationMode').value = 'auto';
+                document.getElementById('fixedAngle').value = '45';
+                document.getElementById('enablePartitions').checked = false;
+                document.getElementById('baseGridPitch').value = '13';
+                document.getElementById('partitionThickness').value = '3';
+                document.getElementById('gridCountL').value = '20';
+                document.getElementById('gridPitchL').value = '13';
+                document.getElementById('gridCountW').value = '13';
+                document.getElementById('gridPitchW').value = '13';
+                document.getElementById('binH').value = '96';
+                document.getElementById('binWallMarginL').value = '30.5';
+                document.getElementById('binWallMarginW').value = '8';
+                document.getElementById('binBottomThickness').value = '13';
+                document.getElementById('bottomRibThickness').value = '3';
+                document.getElementById('autoStackInStainless').checked = true;
+                document.getElementById('basketStackCount').value = '1';
+                document.getElementById('partL').value = '133';
+                document.getElementById('partW').value = '95';
+                document.getElementById('partH').value = '23.5';
+                
+                document.getElementById('enableStainless').checked = true;
+                document.getElementById('stL').value = '480';
+                document.getElementById('stW').value = '281';
+                document.getElementById('stH').value = '182';
+                document.getElementById('stOuterL').value = '521';
+                document.getElementById('stOuterW').value = '321';
+                document.getElementById('stOuterH').value = '200';
+                document.getElementById('enableReservation').checked = true;
+                document.getElementById('reservationHeight').value = '15.5';
+
+                this.onPartitionCheckboxChange();
+                this.onRotationCheckboxChange();
+                this.calculateFromGrid();
+            },
+
+            onBasePitchChange() {
+                const basePitch = parseFloat(document.getElementById('baseGridPitch').value) || 13;
+                document.getElementById('gridPitchL').value = basePitch;
+                document.getElementById('gridPitchW').value = basePitch;
+                this.calculateFromGrid();
+            },
+
+            calculateFromGrid() {
+                const countL = parseFloat(document.getElementById('gridCountL').value) || 0;
+                const pitchL = parseFloat(document.getElementById('gridPitchL').value) || 13;
+                const countW = parseFloat(document.getElementById('gridCountW').value) || 0;
+                const pitchW = parseFloat(document.getElementById('gridPitchW').value) || 13;
+
+                const binL = countL * pitchL;
+                const binW = countW * pitchW;
+
+                document.getElementById('binL').value = binL.toFixed(1).replace(/\.0$/, '');
+                document.getElementById('binW').value = binW.toFixed(1).replace(/\.0$/, '');
+
+                this.triggerRecalculate();
+            },
+
+            setBinHeight(hVal) {
+                document.getElementById('binH').value = hVal;
+                this.triggerRecalculate();
+            },
+
+            setBinOuterDefaults(marginL, marginW) {
+                document.getElementById('binWallMarginL').value = marginL;
+                document.getElementById('binWallMarginW').value = marginW;
+                this.triggerRecalculate();
+            },
+
+            setStainlessPreset(inL, inW, inH, outL, outW, outH) {
+                document.getElementById('stL').value = inL;
+                document.getElementById('stW').value = inW;
+                document.getElementById('stH').value = inH;
+                document.getElementById('stOuterL').value = outL;
+                document.getElementById('stOuterW').value = outW;
+                document.getElementById('stOuterH').value = outH;
+                this.triggerRecalculate();
+            },
+
+            toggleRotationMode() {
+                const enabled = document.getElementById('enableRotation').checked;
+                const mode = document.getElementById('rotationMode').value;
+                const wrapper = document.getElementById('fixedAngleWrapper');
+                if (enabled && mode === 'fixed') {
+                    wrapper.classList.remove('hidden');
+                } else {
+                    wrapper.classList.add('hidden');
+                }
+            },
+
+            toggleStainlessOptions() {
+                const enabled = document.getElementById('enableStainless').checked;
+                const container = document.getElementById('stainlessSettingsContainer');
+                const card = document.getElementById('stainlessResultCard');
+                if (enabled) {
+                    container.classList.remove('opacity-50', 'pointer-events-none');
+                    if (card) card.style.display = 'block';
+                } else {
+                    container.classList.add('opacity-50', 'pointer-events-none');
+                    if (card) card.style.display = 'none';
+                }
+            },
+
+            toggleReservationInput() {
+                const enabled = document.getElementById('enableReservation').checked;
+                const wrapper = document.getElementById('reservationWrapper');
+                if (enabled) {
+                    wrapper.classList.remove('opacity-40', 'pointer-events-none');
+                } else {
+                    wrapper.classList.add('opacity-40', 'pointer-events-none');
+                }
+            },
+
+            toggleAutoStack() {
+                const autoStack = document.getElementById('autoStackInStainless').checked;
+                const stackCountInput = document.getElementById('basketStackCount');
+                if (autoStack) {
+                    stackCountInput.setAttribute('readonly', 'true');
+                    stackCountInput.classList.add('opacity-60', 'cursor-not-allowed');
+                } else {
+                    stackCountInput.removeAttribute('readonly');
+                    stackCountInput.classList.remove('opacity-60', 'cursor-not-allowed');
+                }
+            },
+
+            exportReport() {
+                if (!this.currentBestResult) return;
+                const unit = document.getElementById('unit').value;
+                const partL = document.getElementById('partL').value;
+                const partW = document.getElementById('partW').value;
+                const partH = document.getElementById('partH').value;
+                const binL = document.getElementById('binL').value;
+                const binW = document.getElementById('binW').value;
+                const binH = document.getElementById('binH').value;
+                const totalCountText = document.getElementById('totalCount').innerText;
+                const utilizationText = document.getElementById('utilization').innerText;
+                const bestOriText = document.getElementById('bestOrientation').innerText;
+
+                const reportContent = `=== 3D 智慧籃具工件裝箱與隔板總成計算報告 ===
+日期時間: ${new Date().toLocaleString()}
+單位: ${unit}
+
+[工件尺寸]
+長 (L): ${partL} ${unit}
+寬 (W): ${partW} ${unit}
+高 (H): ${partH} ${unit}
+
+[塑膠籃容納空間 (硬體連動)]
+長 (L): ${binL} ${unit}
+寬 (W): ${binW} ${unit}
+高 (H): ${binH} ${unit}
+
+[計算結果]
+最佳放置姿態: ${bestOriText}
+旋轉角度 (垂直軸 Yaw): ${this.currentBestResult.angle}°
+單層數量: ${this.currentBestResult.layerCount} 個 (${this.currentBestResult.nx} × ${this.currentBestResult.ny})
+總裝箱數量: ${totalCountText}
+空間利用率: ${utilizationText}
+`;
+
+                const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Basket_Packaging_Report_${Date.now()}.txt`;
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+
+            triggerRecalculate() {
+                const unit = document.getElementById('unit').value;
+                const unitLabelGap = document.getElementById('unitLabelGap');
+                if (unitLabelGap) unitLabelGap.innerText = unit;
+
+                const basePitch = parseFloat(document.getElementById('baseGridPitch').value) || 13;
+                const binL = parseFloat(document.getElementById('binL').value) || 0;
+                const binW = parseFloat(document.getElementById('binW').value) || 0;
+                const binH = parseFloat(document.getElementById('binH').value) || 0;
+
+                const wallMarginL = parseFloat(document.getElementById('binWallMarginL').value) || 0;
+                const wallMarginW = parseFloat(document.getElementById('binWallMarginW').value) || 0;
+                const bottomThickness = parseFloat(document.getElementById('binBottomThickness').value) || 0;
+                const bottomRibThick = parseFloat(document.getElementById('bottomRibThickness').value) || 3;
+
+                const gridCountL = parseInt(document.getElementById('gridCountL').value) || 20;
+                const gridCountW = parseInt(document.getElementById('gridCountW').value) || 13;
+                const gridPitchL = parseFloat(document.getElementById('gridPitchL').value) || 13;
+                const gridPitchW = parseFloat(document.getElementById('gridPitchW').value) || 13;
+
+                const outerL = binL + (wallMarginL * 2);
+                const outerW = binW + (wallMarginW * 2);
+                const plasticBasketUnitHeight = binH + bottomThickness;
+                const outerH = plasticBasketUnitHeight;
+
+                const enableStainless = document.getElementById('enableStainless').checked;
+                const autoStack = document.getElementById('autoStackInStainless').checked;
+                let basketStackCount = parseInt(document.getElementById('basketStackCount').value) || 1;
+
+                const enableReservation = document.getElementById('enableReservation').checked;
+                const reservationH = enableReservation ? (parseFloat(document.getElementById('reservationHeight').value) || 0) : 0;
+
+                if (enableStainless && autoStack && plasticBasketUnitHeight > 0) {
+                    const stH = parseFloat(document.getElementById('stH').value) || 0;
+                    const availableHeightForBaskets = stH - reservationH;
+                    if (availableHeightForBaskets > 0) {
+                        basketStackCount = Math.max(1, Math.floor(availableHeightForBaskets / plasticBasketUnitHeight));
+                        const stackInput = document.getElementById('basketStackCount');
+                        if (stackInput) stackInput.value = basketStackCount;
+                    }
+                }
+
+                const totalStackedHeight = plasticBasketUnitHeight * basketStackCount;
+
+                const outerBinDimDisp = document.getElementById('outerBinDimensionsDisplay');
+                if (outerBinDimDisp) {
+                    outerBinDimDisp.innerText = `${outerL.toFixed(1).replace(/\.0$/, '')} × ${outerW.toFixed(1).replace(/\.0$/, '')} × ${outerH.toFixed(1).replace(/\.0$/, '')} ${unit}`;
+                }
+
+                const totalStackedHeightDisp = document.getElementById('totalStackedHeightDisplay');
+                if (totalStackedHeightDisp) {
+                    totalStackedHeightDisp.innerText = `${totalStackedHeight.toFixed(1).replace(/\.0$/, '')} ${unit} (${basketStackCount}層塑膠籃)`;
+                }
+
+                const partL = parseFloat(document.getElementById('partL').value) || 0;
+                const partW = parseFloat(document.getElementById('partW').value) || 0;
+                const partH = parseFloat(document.getElementById('partH').value) || 0;
+
+                const gap = parseFloat(document.getElementById('gapSize').value) || 0;
+                const enableRotation = document.getElementById('enableRotation').checked;
+                const rotationMode = document.getElementById('rotationMode').value;
+                const fixedAngle = parseFloat(document.getElementById('fixedAngle').value) || 0;
+
+                const enablePartitions = document.getElementById('enablePartitions').checked;
+                const partitionThick = parseFloat(document.getElementById('partitionThickness').value) || 3;
+
+                const warningBanner = document.getElementById('fittingWarningBanner');
+                const warningText = document.getElementById('fittingWarningText');
+
+                if (binL <= 0 || binW <= 0 || binH <= 0 || partL <= 0 || partW <= 0 || partH <= 0) {
+                    if (warningBanner) warningBanner.classList.add('hidden');
+                    return;
+                }
+
+                this.allCalculatedResults = CalculationCore.computeAllLayouts({
+                    binL, binW, binH, partL, partW, partH,
+                    gap, enableRotation, rotationMode, fixedAngle,
+                    enablePartitions, basePitch, partitionThick,
+                    gridCountL, gridCountW, gridPitchL, gridPitchW
+                });
+
+                if (this.allCalculatedResults.length === 0) {
+                    if (warningBanner) warningBanner.classList.remove('hidden');
+                    if (warningText) {
+                        warningText.innerHTML = `在當前設定下，容納空間 (長:${binL}, 寬:${binW}, 高:${binH}) 與安全間隙找不到任何可放入的有效排布方案。`;
+                    }
+
+                    document.getElementById('totalCount').innerText = '0 個';
+                    document.getElementById('utilization').innerText = '0.0%';
+                    document.getElementById('bestOrientation').innerText = '無法放置';
+                    document.getElementById('rotationAngleDisplay').innerText = '旋轉角度: -';
+                    document.getElementById('layerCount').innerText = '單層數量: 0 個';
+                    document.getElementById('stackLayers').innerText = '堆疊層數: 0 層';
+                    document.getElementById('orientationTableBody').innerHTML = '<tr><td colspan="5" class="p-4 text-center text-rose-500 font-semibold">⚠️ 無法在此設定下排入任何工件。</td></tr>';
+                    
+                    Renderer3D.updateScene({
+                        binL, binW, binH, outerL, outerW, outerH, bottomThickness, bottomRibThick,
+                        stackCount: basketStackCount, bestRes: null, gap, enableStainless,
+                        stOuterL: parseFloat(document.getElementById('stOuterL').value) || 0,
+                        stOuterW: parseFloat(document.getElementById('stOuterW').value) || 0,
+                        stOuterH: parseFloat(document.getElementById('stOuterH').value) || 0,
+                        enablePartitions, partitionThick, partL, partW, partH, gridCountL, gridCountW, gridPitchL, gridPitchW
+                    });
+                    return;
+                } else {
+                    if (warningBanner) warningBanner.classList.add('hidden');
+                }
+
+                if (this.selectedResultIndex >= this.allCalculatedResults.length) {
+                    this.selectedResultIndex = 0;
+                }
+
+                const activeRes = this.allCalculatedResults[this.selectedResultIndex] || this.allCalculatedResults[0];
+
+                const binVolume = binL * binW * binH;
+                const partVolume = partL * partW * partH;
+                const totalPartVolume = activeRes.totalCount * partVolume;
+                const utilization = binVolume > 0 ? (totalPartVolume / binVolume) * 100 : 0;
+
+                activeRes.utilization = utilization;
+                this.currentBestResult = activeRes;
+
+                const totalItemsAllBins = activeRes.totalCount * basketStackCount;
+
+                document.getElementById('totalCount').innerText = `${totalItemsAllBins} 個`;
+                document.getElementById('utilization').innerText = `${utilization.toFixed(1)}%`;
+                document.getElementById('bestOrientation').innerText = `${activeRes.orientation.name}`;
+                document.getElementById('rotationAngleDisplay').innerText = `旋轉角度 (Yaw): ${activeRes.angle}°`;
+                document.getElementById('layerCount').innerText = `單層數量: ${activeRes.layerCount} 個 (${activeRes.nx} × ${activeRes.ny})`;
+                document.getElementById('stackLayers').innerText = `堆疊層數: ${basketStackCount} 層 (總共 ${totalItemsAllBins} 個)`;
+
+                const tbody = document.getElementById('orientationTableBody');
+                tbody.innerHTML = '';
+
+                this.allCalculatedResults.forEach((res, idx) => {
+                    const row = document.createElement('tr');
+                    const isBest = (idx === 0);
+                    const isSelected = (idx === this.selectedResultIndex);
+                    
+                    if (isSelected) {
+                        row.className = 'bg-emerald-100 font-bold text-emerald-900 cursor-pointer border-l-4 border-emerald-600 shadow-sm transition';
+                    } else if (isBest) {
+                        row.className = 'bg-emerald-50/80 font-semibold text-emerald-900 cursor-pointer hover:bg-emerald-100 transition';
+                    } else {
+                        row.className = 'hover:bg-slate-100 text-slate-700 cursor-pointer transition';
+                    }
+                    
+                    row.onclick = () => {
+                        this.selectedResultIndex = idx;
+                        this.triggerRecalculate();
+                    };
+
+                    const stackedTotal = res.totalCount * basketStackCount;
+                    row.innerHTML = `
+                        <td class="p-3 flex items-center gap-2">
+                            <span>${res.orientation.name}</span>
+                            ${isBest ? '<span class="bg-emerald-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold">最佳</span>' : ''}
+                            ${isSelected && !isBest ? '<span class="bg-slate-600 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold">檢視中</span>' : ''}
+                        </td>
+                        <td class="p-3">${res.angle}°</td>
+                        <td class="p-3">${res.nx} × ${res.ny} (${res.layerCount}個)</td>
+                        <td class="p-3">${res.nz} 層</td>
+                        <td class="p-3 text-emerald-600 font-bold">${stackedTotal} 個 <span class="text-[10px] font-normal">(${basketStackCount}層)</span></td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                if (enableStainless) {
+                    const stL = parseFloat(document.getElementById('stL').value) || 0;
+                    const stW = parseFloat(document.getElementById('stW').value) || 0;
+                    const stH = parseFloat(document.getElementById('stH').value) || 0;
+
+                    const stFitStatus = document.getElementById('stFitStatus');
+                    const stFitDetails = document.getElementById('stFitDetails');
+
+                    const maxPossibleLayers = plasticBasketUnitHeight > 0 ? Math.floor((stH - reservationH) / plasticBasketUnitHeight) : 0;
+                    const fitsNormal = (outerL <= stL && outerW <= stW && (totalStackedHeight + reservationH) <= stH) ||
+                                       (outerL <= stW && outerW <= stL && (totalStackedHeight + reservationH) <= stH);
+
+                    if (fitsNormal) {
+                        stFitStatus.className = "px-2 py-0.5 rounded-full font-semibold text-[11px] bg-emerald-100 text-emerald-800 border border-emerald-300";
+                        stFitStatus.innerText = "✓ 可完全容納";
+                        stFitDetails.innerHTML = `目前堆疊 <b>${basketStackCount}</b> 層（總高 <b>${totalStackedHeight.toFixed(1)}</b> mm ${reservationH > 0 ? `+ 預留高 <b>${reservationH}</b> mm = <b>${(totalStackedHeight + reservationH).toFixed(1)}</b> mm` : ''}）可放入不鏽鋼籃容納高 (<b>${stH}</b> mm)。該不鏽鋼籃最多可放入 <b>${maxPossibleLayers}</b> 層。`;
+                    } else {
+                        stFitStatus.className = "px-2 py-0.5 rounded-full font-semibold text-[11px] bg-rose-100 text-rose-800 border border-rose-300";
+                        stFitStatus.innerText = "✗ 尺寸超出限制";
+                        let reasons = [];
+                        if (outerL > stL && outerL > stW || outerW > stW && outerW > stL) reasons.push("底面積超出");
+                        if ((totalStackedHeight + reservationH) > stH) reasons.push(`總高度${reservationH > 0 ? `+預留(${ (totalStackedHeight + reservationH).toFixed(1) }mm)` : ''}超過容納高(${stH}mm)`);
+                        stFitDetails.innerHTML = `無法放入：${reasons.join('、')}。建議最大可放入層數為 <b>${Math.max(0, maxPossibleLayers)}</b> 層。`;
+                    }
+                }
+
+                const stOuterL = parseFloat(document.getElementById('stOuterL').value) || 0;
+                const stOuterW = parseFloat(document.getElementById('stOuterW').value) || 0;
+                const stOuterH = parseFloat(document.getElementById('stOuterH').value) || 0;
+
+                Renderer3D.updateScene({
+                    binL, binW, binH, outerL, outerW, outerH, bottomThickness, bottomRibThick,
+                    stackCount: basketStackCount, bestRes: activeRes, gap, enableStainless,
+                    stOuterL, stOuterW, stOuterH, enablePartitions, partitionThick,
+                    partL, partW, partH, gridCountL, gridCountW, gridPitchL, gridPitchW
+                });
+            }
+        };
+
+        window.onload = function() {
+            AppController.init();
+        };
     </script>
 </body>
 </html>
